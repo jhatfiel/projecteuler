@@ -75,8 +75,8 @@ export class NavService {
     }
 
     public getPuzzleLink() {
-        let link = 'https://example.com/';
-        if (this.id) link += `${this.id}`;
+        let link = 'https://projecteuler.net/';
+        if (this.id) link += `problem=${this.id}`;
         return link;
     }
 

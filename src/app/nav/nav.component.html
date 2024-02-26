@@ -1,6 +1,6 @@
 <p-toolbar>
     <div class="p-toolbar-group-start">
-        <a [href]="navService.getPuzzleLink()" target="_blank" title="View puzzle details">Puzzle</a>
+        <a [href]="navService.getPuzzleLink()" target="_blank" title="View puzzle details">Project Euler</a>
         <span class="currentPuzzle" (click)="navService.openNav()">{{this.navService.getPuzzleDescription()}}</span> &nbsp; 
         <span class="puzzleStepNumber">Step: {{ this.navService.getPuzzleStepNumber() }}</span>
     </div>

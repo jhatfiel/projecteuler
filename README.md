@@ -1,4 +1,4 @@
-# Puzzle Template
+# Project Euler solutions
 
 `npm i --save-dev @types/node` to initialize node_modules folder
 
