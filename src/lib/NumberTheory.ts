@@ -28,3 +28,11 @@ export function PrimeFactors(n: number): Map<number, number> {
     })
     return result;
 }
+
+export function GCD(x: bigint, y: bigint): bigint {
+    return (y === 0n)?x:GCD(y, x%y);
+}
+
+export function LCM(x: bigint, y: bigint): bigint {
+    return x*(y/GCD(x, y));
+}
