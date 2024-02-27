@@ -19,6 +19,7 @@ export class AppComponent implements AfterViewInit {
         {label: '0003: Largest Prime Factor', routerLink: '0003/a'},
         {label: '0004: Largest Palindrome Product', routerLink: '0004/a'},
         {label: '0005: Smallest Multiple', routerLink: '0005/a'},
+        {label: '0006: Sum Square Difference', routerLink: '0006/a'},
     ];
 
     constructor(private navService: NavService) { }

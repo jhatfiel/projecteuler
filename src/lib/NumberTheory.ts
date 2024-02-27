@@ -36,3 +36,7 @@ export function GCD(x: bigint, y: bigint): bigint {
 export function LCM(x: bigint, y: bigint): bigint {
     return x*(y/GCD(x, y));
 }
+
+export function ArithmeticProgressionSum(first: number, last: number, step=1): number {
+    return (Math.floor((last-first)/step) + 1) * ((first + last) / 2)
+}
