@@ -1,0 +1,30 @@
+let _NUMBERS_PRIME_cache: number[] = [];
+let _NUMBERS_PRIME_lastChecked = 2;
+
+export function* PrimeGenerator(): Generator<number> {
+    while (true) {
+        if (_NUMBERS_PRIME_cache.every(n => _NUMBERS_PRIME_lastChecked % n !== 0)) {
+            _NUMBERS_PRIME_cache.push(_NUMBERS_PRIME_lastChecked);
+            //console.log(`Found prime: ${_NUMBERS_PRIME_lastChecked}`);
+            yield _NUMBERS_PRIME_lastChecked;
+        }
+        _NUMBERS_PRIME_lastChecked++;
+    }
+}
+
+export function PrimeFactors(n: number): Map<number, number> {
+    let result = new Map<number, number>();
+    let sqr_n = Math.sqrt(n);
+    while (_NUMBERS_PRIME_lastChecked < sqr_n) {
+        PrimeGenerator().next();
+    }
+    _NUMBERS_PRIME_cache.filter(p => n%p === 0).forEach(p => {
+        let cnt = 0;
+        while (n % p === 0) {
+            cnt++;
+            n /= p;
+        }
+        result.set(p, cnt);
+    })
+    return result;
+}

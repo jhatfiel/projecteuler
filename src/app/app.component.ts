@@ -15,6 +15,10 @@ export class AppComponent implements AfterViewInit {
         {label: 'Home', routerLink: '/'},
         //{label: '15: Beverage Bandits', routerLink: '2018/15/a', queryParams: { files: ['a', 'sample', 'sample1', 'sample2', 'sample3', 'sample4', 'sample5', 'sample6', 'input']}},
         {label: '0001: 3 or 5', routerLink: '0001/a'},
+        {label: '0002: Even Fibonacci Numbers', routerLink: '0002/a'},
+        {label: '0003: Largest Prime Factor', routerLink: '0003/a'},
+        {label: '0004: Largest Palindrome Product', routerLink: '0004/a'},
+        {label: '0005: Smallest Multiple', routerLink: '0005/a'},
     ];
 
     constructor(private navService: NavService) { }
