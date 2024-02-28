@@ -2,13 +2,16 @@ let _NUMBERS_PRIME_cache: number[] = [];
 let _NUMBERS_PRIME_lastChecked = 2;
 
 export function* PrimeGenerator(): Generator<number> {
+    _NUMBERS_PRIME_cache.push(_NUMBERS_PRIME_lastChecked);
+    yield _NUMBERS_PRIME_lastChecked;
+    _NUMBERS_PRIME_lastChecked++;
     while (true) {
         if (_NUMBERS_PRIME_cache.every(n => _NUMBERS_PRIME_lastChecked % n !== 0)) {
             _NUMBERS_PRIME_cache.push(_NUMBERS_PRIME_lastChecked);
             //console.log(`Found prime: ${_NUMBERS_PRIME_lastChecked}`);
             yield _NUMBERS_PRIME_lastChecked;
         }
-        _NUMBERS_PRIME_lastChecked++;
+        _NUMBERS_PRIME_lastChecked+=2;
     }
 }
 
