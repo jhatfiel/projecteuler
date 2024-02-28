@@ -25,6 +25,7 @@ export class AppComponent implements AfterViewInit {
         {label: '0009: Special Pythagorean Triplet', routerLink: '0009/a'},
         {label: '0010: Summation of Primes', routerLink: '0010/a'},
         {label: '0011: Largest Product in a Grid', routerLink: '0011/a'},
+        {label: '0012: Highly Divisible Triangular Number', routerLink: '0012/a'},
     ];
 
     constructor(private navService: NavService) { }
