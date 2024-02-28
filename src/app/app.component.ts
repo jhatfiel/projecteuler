@@ -29,6 +29,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0012: Highly Divisible Triangular Number', routerLink: '0012/a'},
             {label: '0013: Large Sum', routerLink: '0013/a'},
             {label: '0014: Longest Collatz Sequence', routerLink: '0014/a'},
+            {label: '0015: Lattice Paths', routerLink: '0015/a'},
         ]},
     ];
 
