@@ -1,0 +1,8 @@
+[ip-172-31-43-116.eu-] / 2024-02-28T15:17:49.288Z: [     17.56ms] Ran a0013 resulting in NaN [./data/0013/input.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:17:58.692Z: [      7.65ms] Ran a0013 resulting in 2.72819012 [./data/0013/sample.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:18:28.368Z: [      2.69ms] Ran a0013 resulting in 2728190129 [./data/0013/sample.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:18:36.419Z: [     15.82ms] Ran a0013 resulting in 5537376230 [./data/0013/input.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:20:46.624Z: [     23.93ms] Ran a0013 resulting in 5537376230 [./data/0013/input.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:20:56.606Z: [     16.81ms] Ran a0013 resulting in 5537376230 [./data/0013/input.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:21:47.694Z: [      1.69ms] Ran a0013 resulting in 5537376230 [./data/0013/input.txt]
+[ip-172-31-43-116.eu-] / 2024-02-28T15:22:07.157Z: [      1.62ms] Ran a0013 resulting in 5537376230 [./data/0013/input.txt]
