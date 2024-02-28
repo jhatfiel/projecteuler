@@ -23,6 +23,7 @@ export class AppComponent implements AfterViewInit {
         {label: '0007: 10001st Prime', routerLink: '0007/a'},
         {label: '0008: Largest Product in a Series', routerLink: '0008/a'},
         {label: '0009: Special Pythagorean Triplet', routerLink: '0009/a'},
+        {label: '0010: Summation of Primes', routerLink: '0010/a'},
     ];
 
     constructor(private navService: NavService) { }
