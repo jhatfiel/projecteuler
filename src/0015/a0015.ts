@@ -1,4 +1,4 @@
-import { Factorial } from '../lib/NumberTheory';
+import { Factorial, NChooseK } from '../lib/NumberTheory';
 import { Puzzle } from '../lib/Puzzle';
 
 export class a0015 extends Puzzle {
@@ -15,7 +15,8 @@ export class a0015 extends Puzzle {
         // bc(n,k) = n! / k!(n-k)!
         // 2*n things to choose, we can choose them n different ways, so n = 2*n, k = 2
         let size = BigInt(this.input);
-        this.result = (Factorial(2n*size)/Factorial(size)/Factorial(size)).toString();
+        //this.result = (Factorial(2n*size)/Factorial(size)/Factorial(size)).toString();
+        this.result = NChooseK(2*this.input, this.input).toString();
     }
 
     _runStep(): boolean {

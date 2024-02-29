@@ -132,4 +132,33 @@ export function Factorial(n: bigint): bigint {
     else return n*Factorial(n-1n);
 }
 
+/**
+ * N Choose K or Binomial Coefficient - defined as 
+ * 
+ *  `n! / ( k! * (n-k)!)`
+ *
+ *  To reduce the size of the factorials, we just manually compute the leftover n! in the numerator and the leftover part of the denominator
+ * @param n of N Choose K
+ * @param k of N Choose K 
+ * @returns 
+ */
+export function NChooseK(n: number, k: number): bigint {
+    // 10,4 would be 10*9*8*7*6*5*4*3*2             = 10*9*8*7
+    //                        6*5*4*3*2 * 4*3*2*1     4*3*2*1
+    // 10,3 would be 10*9*8*7*6*5*4*3*2             = 10*9*8
+    //                      7*6*5*4*3*2 * 3*2*1       3*2*1
+    // or, n*(n-1)*...*(Math.max(k, n-k)+1) / (Math.min(k, n-k))*(-1)*...*(1)
+    // i=1..Math.min(k, n-k)
+    //   num*=n-i+1
+    //   den*=i
+    let bn = BigInt(n),
+        num = 1n,
+        den = 1n;
+    for (let i=1n; i<Math.min(k, n-k); i++) {
+        num *= bn-i+1n;
+        den *= i;
+    }
+    return num/den;
+}
+
 export { Primes };
