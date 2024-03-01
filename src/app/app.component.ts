@@ -34,6 +34,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0017: Number Letter Counts', routerLink: '0017/a'},
             {label: '0018: Maximum Path Sum I', routerLink: '0018/a'},
             {label: '0019: Counting Sundays', routerLink: '0019/a'},
+            {label: '0020: Factorial Digit Sum', routerLink: '0020/a'},
         ]},
     ];
 
