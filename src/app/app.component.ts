@@ -30,6 +30,9 @@ export class AppComponent implements AfterViewInit {
             {label: '0013: Large Sum', routerLink: '0013/a'},
             {label: '0014: Longest Collatz Sequence', routerLink: '0014/a'},
             {label: '0015: Lattice Paths', routerLink: '0015/a'},
+            {label: '0016: Power Digit Sum', routerLink: '0016/a'},
+            {label: '0017: Number Letter Counts', routerLink: '0017/a'},
+            {label: '0018: Maximum Path Sum I', routerLink: '0018/a'},
         ]},
     ];
 
