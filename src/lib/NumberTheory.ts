@@ -69,6 +69,9 @@ let Primes = PrimeGenerator();
  */
 export function PrimeFactors(n: number): Map<number, number> {
     let result = new Map<number, number>();
+    if (n === 0) {
+        return result;
+    }
     let sqr_n = Math.sqrt(n);
     //console.log(`PrimeFactors(${n}) ${_NUMBERS_PRIME_lastChecked}`);
     while (_NUMBERS_PRIME_lastChecked < sqr_n) {

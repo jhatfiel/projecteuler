@@ -1,7 +1,40 @@
 {
   // For more information, visit: https://go.microsoft.com/fwlink/?LinkId=733558
   "version": "2.0.0",
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "directory_name",
+      "description": "Directory Name: ",
+    }
+  ],
   "tasks": [
+    {
+      "label": "Create data files",
+      "type": "shell",
+      "command": "mkdir ${workspaceFolder}/data/${input:directory_name} && touch ${workspaceFolder}/data/${input:directory_name}/sample.txt && touch ${workspaceFolder}/data/${input:directory_name}/input.txt && code -r ${workspaceFolder}/data/${input:directory_name}/input.txt && code -r ${workspaceFolder}/data/${input:directory_name}/sample.txt",
+    },
+    {
+      "label": "Create src files",
+      "type": "shell",
+      "command": "mkdir ${workspaceFolder}/src/${input:directory_name} && echo \"import { Puzzle } from '../lib/Puzzle';\n\nexport class a${input:directory_name} extends Puzzle {\n    input: number;\n    sampleMode(): void { };\n\n    _loadData(lines: string[]) {\n        this.input = Number(lines[0]);\n    }\n\n    _runStep(): boolean {\n        let moreToDo = false;\n        this.log(\\`[\\${this.stepNumber.toString().padStart(5, ' ')}] input=\\${this.input}\\`);\n        this.result = 'Result';\n        return moreToDo;\n    }\n}\" > ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts && code -r ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts",
+    },
+    {
+      "label": "New directory",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Create data files", "Create src files"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "panel": "shared",
+        "focus": false,
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
     {
       "type": "npm",
       "script": "start",
@@ -37,6 +70,19 @@
           }
         }
       }
+    },
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.json",
+      "option": "watch",
+      "problemMatcher": [
+        "$tsc-watch"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "tsc: watch - tsconfig.json"
     }
   ]
 }
