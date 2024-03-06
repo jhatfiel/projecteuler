@@ -36,6 +36,8 @@ export class AppComponent implements AfterViewInit {
             {label: '0019: Counting Sundays', routerLink: '0019/a'},
             {label: '0020: Factorial Digit Sum', routerLink: '0020/a'},
             {label: '0021: Amicable Numbers', routerLink: '0021/a'},
+            {label: '0022: Names Scores', routerLink: '0022/a'},
+            {label: '0023: Non-Abundant Sums', routerLink: '0023/a'},
         ]},
     ];
 

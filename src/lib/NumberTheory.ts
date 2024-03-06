@@ -101,6 +101,11 @@ export function GetDivisors(n: number): number[] {
     return PermuteFactors(PrimeFactors(n));
 }
 
+export function GetProperDivisors(n: number): number[] {
+    let arr = PermuteFactors(PrimeFactors(n));
+    return arr.slice(0, arr.length-1);
+}
+
 /**
  * helper function to build divisors given a list of factors
  * @param factors 
