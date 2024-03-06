@@ -23,7 +23,7 @@
       "label": "New directory",
       "type": "shell",
       "dependsOrder": "sequence",
-      "dependsOn": ["Create data files", "Create src files"],
+      "dependsOn": ["Create src files", "Create data files"],
       "group": {
         "kind": "test",
         "isDefault": true

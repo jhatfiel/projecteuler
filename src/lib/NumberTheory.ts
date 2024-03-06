@@ -169,4 +169,14 @@ export function NChooseK(n: number, k: number): bigint {
     return num/den;
 }
 
+export function* Fibonacci(): Generator<BigInt> {
+    let arr = [1n,1n];
+    yield arr[0];
+    yield arr[1];
+    for (;;) {
+        [arr[0], arr[1]] = [arr[1], arr[0]+arr[1]];
+        yield arr[1];
+    }
+}
+
 export { Primes };

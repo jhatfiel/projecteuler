@@ -39,6 +39,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0022: Names Scores', routerLink: '0022/a'},
             {label: '0023: Non-Abundant Sums', routerLink: '0023/a'},
             {label: '0024: Lexicographic Permutations', routerLink: '0024/a'},
+            {label: '0025: 1000-digit Fibonacci Number', routerLink: '0025/a'},
         ]},
     ];
 
