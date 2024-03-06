@@ -38,6 +38,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0021: Amicable Numbers', routerLink: '0021/a'},
             {label: '0022: Names Scores', routerLink: '0022/a'},
             {label: '0023: Non-Abundant Sums', routerLink: '0023/a'},
+            {label: '0024: Lexicographic Permutations', routerLink: '0024/a'},
         ]},
     ];
 
