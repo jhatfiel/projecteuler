@@ -1,4 +1,5 @@
 let _NUMBERS_PRIME_cache: number[] = [2];
+let _NUMBERS_PRIME_lookup = new Set<number>();
 let _NUMBERS_PRIME_lastChecked = 3;
 
 /**
@@ -13,6 +14,7 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
     let crossover = Math.ceil((Math.sqrt(max) - 1)/2) - 1;
     //console.log(`Setting up, max=${n}, length=${length}, crossover=${crossover}`);
     _NUMBERS_PRIME_cache = [2];
+    _NUMBERS_PRIME_lookup.add(2);
     _NUMBERS_PRIME_lastChecked=3;
     yield 2;
     for (let i=0; i<crossover; i++) {
@@ -20,6 +22,7 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
         if (oddPrimes[i]) {
             let p = 2*(i+1)+1;
             _NUMBERS_PRIME_cache.push(p);
+            _NUMBERS_PRIME_lookup.add(p);
             _NUMBERS_PRIME_lastChecked=p;
             yield p;
             // mark everything above p^2 as false
@@ -34,6 +37,7 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
         if (oddPrimes[i]) {
             let p = 2*(i+1)+1;
             _NUMBERS_PRIME_cache.push(p);
+            _NUMBERS_PRIME_lookup.add(p);
             _NUMBERS_PRIME_lastChecked=p;
             yield p;
         }
@@ -89,6 +93,13 @@ export function PrimeFactors(n: number): Map<number, number> {
     })
     if (n !== 1) result.set(n, 1);
     return result;
+}
+
+export function IsPrime(n: number): boolean {
+    while (_NUMBERS_PRIME_lastChecked < n) {
+        Primes.next();
+    }
+    return _NUMBERS_PRIME_lookup.has(n);
 }
 
 /**
