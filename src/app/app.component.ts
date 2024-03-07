@@ -44,6 +44,7 @@ export class AppComponent implements AfterViewInit {
         {label: '26-50', items: [
             {label: '0026: Reciprocal Cycles', routerLink: '0026/a'},
             {label: '0027: Quadratic Primes', routerLink: '0027/a'},
+            {label: '0028: Number Spiral Diagonals', routerLink: '0028/a'},
         ]},
     ];
 
