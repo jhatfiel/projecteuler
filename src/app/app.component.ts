@@ -14,7 +14,7 @@ export class AppComponent implements AfterViewInit {
     navItems: MenuItem[] = [
         {label: 'Home', routerLink: '/'},
         //{label: '15: Beverage Bandits', routerLink: '2018/15/a', queryParams: { files: ['a', 'sample', 'sample1', 'sample2', 'sample3', 'sample4', 'sample5', 'sample6', 'input']}},
-        {label: '1-50', items: [
+        {label: '1-25', items: [
             {label: '0001: 3 or 5', routerLink: '0001/a'},
             {label: '0002: Even Fibonacci Numbers', routerLink: '0002/a'},
             {label: '0003: Largest Prime Factor', routerLink: '0003/a'},
@@ -40,6 +40,9 @@ export class AppComponent implements AfterViewInit {
             {label: '0023: Non-Abundant Sums', routerLink: '0023/a'},
             {label: '0024: Lexicographic Permutations', routerLink: '0024/a'},
             {label: '0025: 1000-digit Fibonacci Number', routerLink: '0025/a'},
+        ]},
+        {label: '26-50', items: [
+            {label: '0026: Reciprocal Cycles', routerLink: '0026/a'},
         ]},
     ];
 

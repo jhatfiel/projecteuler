@@ -151,6 +151,7 @@ export function Factorial(n: bigint): bigint {
  * @returns 
  */
 export function NChooseK(n: number, k: number): bigint {
+    // N!/(k!*(n-k)!)
     // 10,4 would be 10*9*8*7*6*5*4*3*2             = 10*9*8*7
     //                        6*5*4*3*2 * 4*3*2*1     4*3*2*1
     // 10,3 would be 10*9*8*7*6*5*4*3*2             = 10*9*8
@@ -162,7 +163,9 @@ export function NChooseK(n: number, k: number): bigint {
     let bn = BigInt(n),
         num = 1n,
         den = 1n;
-    for (let i=1n; i<Math.min(k, n-k); i++) {
+    for (let i=1n; i<=Math.min(k, n-k); i++) {
+        console.log(`Multiplying numerator by ${bn-i+1n}`);
+        console.log(`Multiplying denominator by ${i}`);
         num *= bn-i+1n;
         den *= i;
     }
@@ -177,6 +180,21 @@ export function* Fibonacci(): Generator<BigInt> {
         [arr[0], arr[1]] = [arr[1], arr[0]+arr[1]];
         yield arr[1];
     }
+}
+
+/**
+ * Return the period of the unit fraction 1/`d`
+ * @param d denominator
+ */
+export function GetPeriod(d: number): number {
+    let nPos = new Map<number, number>();
+    let n = 10;
+    let pos = 0;
+    while (!nPos.has(n)) {
+        nPos.set(n, pos++);
+        n = (n % d) * 10;
+    }
+    return n>0?pos - nPos.get(n):0;
 }
 
 export { Primes };

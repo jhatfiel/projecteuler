@@ -1,4 +1,4 @@
-import { OrderedPermutations, Permutations, Rotations } from '../lib/CombiPerm';
+import { Permutations } from '../lib/CombiPerm';
 import { Puzzle } from '../lib/Puzzle';
 
 export class a0024 extends Puzzle {
@@ -15,8 +15,7 @@ export class a0024 extends Puzzle {
         for (let i=0; i<= this.input; i++) {
             arr.push(i);
         }
-        this.permutationGenerator = OrderedPermutations(arr);
-
+        this.permutationGenerator = Permutations(arr);
     }
 
     _runStep(): boolean {
