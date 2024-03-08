@@ -78,7 +78,7 @@ export function PrimeFactors(n: number): Map<number, number> {
     }
     let sqr_n = Math.sqrt(n);
     //console.log(`PrimeFactors(${n}) ${_NUMBERS_PRIME_lastChecked}`);
-    while (_NUMBERS_PRIME_lastChecked < sqr_n) {
+    while (_NUMBERS_PRIME_lastChecked <= sqr_n) {
         Primes.next();
     }
     //console.log(`Finding factors (cache=${_NUMBERS_PRIME_cache})`);
@@ -134,12 +134,16 @@ function PermuteFactors(factors: Map<number, number>): number[] {
     }
 }
 
-export function GCD(x: bigint, y: bigint): bigint {
-    return (y === 0n)?x:GCD(y, x%y);
+export function GCD(x: bigint|number, y: bigint|number): bigint {
+    let bx = BigInt(x),
+        by = BigInt(y);
+    return (by === 0n)?bx:GCD(y, bx%by);
 }
 
-export function LCM(x: bigint, y: bigint): bigint {
-    return x*(y/GCD(x, y));
+export function LCM(x: bigint|number, y: bigint|number): bigint {
+    let bx = BigInt(x),
+        by = BigInt(y);
+    return bx*(by/GCD(x, y));
 }
 
 export function ArithmeticProgressionSum(first: number, last: number, step=1): number {
