@@ -35,3 +35,17 @@ export function Permutations<T>(arr: T[]): Generator<T[]> {
                 }
     }(0);
 }
+
+export function* Subsets<T>(arr: T[], length: number, start: number = 0): Generator<Set<T>> {
+    if (start >= arr.length || length < 1) yield new Set();
+    else {
+        while (start <= arr.length - length) {
+            let first = arr[start];
+            for (let subset of Subsets(arr, length - 1, start + 1)) {
+                subset.add(first);
+                yield subset;
+            }
+            start++;
+        }
+    }
+}
