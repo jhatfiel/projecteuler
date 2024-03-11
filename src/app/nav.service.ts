@@ -58,7 +58,7 @@ export class NavService {
                         this.files = ['sample', 'input'];
                     }
                     import(
-                        /* webpackInclude: /src[\/\\]\d+[\/\\][a-z]\d+.ts$/ */
+                        /* webpackInclude: /src[\/\\].+[\/\\][a-z].+.ts$/ */
                         `src/${this.id}/${this.classname}`
                     ).then(clazzModule => {
                         this.clazzModule = clazzModule;

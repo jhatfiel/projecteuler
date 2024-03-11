@@ -46,6 +46,10 @@ export class AppComponent implements AfterViewInit {
             {label: '0027: Quadratic Primes', routerLink: '0027/a'},
             {label: '0028: Number Spiral Diagonals', routerLink: '0028/a'},
             {label: '0029: Distinct Powers', routerLink: '0029/a'},
+            {label: '0030: Digit Fifth Powers', routerLink: '0030/a'},
+        ]},
+        {label: 'Other', items: [
+            {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
         ]},
     ];
 
