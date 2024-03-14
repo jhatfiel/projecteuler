@@ -150,9 +150,9 @@ export function ArithmeticProgressionSum(first: number, last: number, step=1): n
     return (Math.floor((last-first)/step) + 1) * ((first + last) / 2);
 }
 
-export function Factorial(n: bigint): bigint {
+export function Factorial(n: number): bigint {
     if (n<=1) return 1n;
-    else return n*Factorial(n-1n);
+    else return BigInt(n)*Factorial(n-1);
 }
 
 /**

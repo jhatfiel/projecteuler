@@ -11,7 +11,7 @@ export class a0020 extends Puzzle {
 
     _runStep(): boolean {
         let moreToDo = false;
-        let factorial = Factorial(BigInt(this.input));
+        let factorial = Factorial(this.input);
         let sumDigits = factorial.toString().split('').reduce((sum, d) => sum+=Number(d), 0);
         this.log(`[${this.stepNumber.toString().padStart(5, ' ')}] input=${this.input}, sum ! digits: ${sumDigits}`);
         this.result = sumDigits.toString();

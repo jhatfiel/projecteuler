@@ -1,4 +1,4 @@
-import { Factorial, NChooseK } from '../lib/NumberTheory';
+import { NChooseK } from '../lib/NumberTheory';
 import { Puzzle } from '../lib/Puzzle';
 
 export class a0015 extends Puzzle {

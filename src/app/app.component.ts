@@ -49,6 +49,8 @@ export class AppComponent implements AfterViewInit {
             {label: '0030: Digit Fifth Powers', routerLink: '0030/a'},
             {label: '0031: Coin Sums', routerLink: '0031/a'},
             {label: '0032: Pandigital Products', routerLink: '0032/a'},
+            {label: '0033: Digit Cancelling Fractions', routerLink: '0033/a'},
+            {label: '0034: Digit Factorials', routerLink: '0034/a'},
         ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},

@@ -49,3 +49,24 @@ export function* Subsets<T>(arr: T[], length: number, start: number = 0): Genera
         }
     }
 }
+
+/**
+ * Generate an array of increasing "indexes", of `numDigits` length, picking from a bag containing `length` items.
+ * 0,0,...,0,0 then 0,0,...,0,1 up to 8,9,...,9,9 and finally 9,9,...,9,9
+ * 
+ * This is unordered sampling with replacement
+ * 
+ * @param numDigits number of digits to produce
+ * @returns Generator that produces arrays of "indexes" given the available choices
+ */
+export function UnorderedSamplingWithReplacement(numDigits: number, length = 10): Generator<number[]> {
+    return function* backtrack(arr: number[] = []): Generator<number[]> {
+        if (arr.length === numDigits) yield arr;
+        else {
+            let prevIndex = arr.length>0?arr[arr.length-1]:0;
+            for (let i=prevIndex; i<length; i++) {
+                yield* backtrack([...arr, i]);
+            }
+        }
+    }();
+}
