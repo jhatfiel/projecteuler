@@ -150,9 +150,14 @@ export function ArithmeticProgressionSum(first: number, last: number, step=1): n
     return (Math.floor((last-first)/step) + 1) * ((first + last) / 2);
 }
 
+let _NUMBERS_FACTORIAL_lookup: bigint[] = [1n, 1n];
 export function Factorial(n: number): bigint {
-    if (n<=1) return 1n;
-    else return BigInt(n)*Factorial(n-1);
+    let result = _NUMBERS_FACTORIAL_lookup[n];
+    if (result === undefined) {
+        result = BigInt(n)*Factorial(n-1);
+        _NUMBERS_FACTORIAL_lookup[n] = result;
+    }
+    return result;
 }
 
 /**

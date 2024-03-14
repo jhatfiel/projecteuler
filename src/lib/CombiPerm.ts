@@ -52,10 +52,9 @@ export function* Subsets<T>(arr: T[], length: number, start: number = 0): Genera
 
 /**
  * Generate an array of increasing "indexes", of `numDigits` length, picking from a bag containing `length` items.
- * 0,0,...,0,0 then 0,0,...,0,1 up to 8,9,...,9,9 and finally 9,9,...,9,9
+ * 00...00, 00...01, up to 89...99, then finally 99...99
  * 
  * This is unordered sampling with replacement
- * 
  * @param numDigits number of digits to produce
  * @returns Generator that produces arrays of "indexes" given the available choices
  */
@@ -66,6 +65,40 @@ export function UnorderedSamplingWithReplacement(numDigits: number, length = 10)
             let prevIndex = arr.length>0?arr[arr.length-1]:0;
             for (let i=prevIndex; i<length; i++) {
                 yield* backtrack([...arr, i]);
+            }
+        }
+    }();
+}
+
+/**
+ * Generate an array of increasing "indexes", of `numDigits` length, picking from a bag containing `length` items.
+ * 
+ * This is unordered sampling with replacement
+ * 
+ * 000000
+ * 000001
+ * 000011
+ * 000111
+ * 001111
+ * 011111
+ * 111111
+ * 000002
+ * 000012
+ * 000112
+ * 001112
+ * 011112
+ * 111112
+ * 000022
+ * @param numDigits number of digits to produce
+ * @returns Generator that produces arrays of "indexes" given the available choices
+ */
+export function UnorderedSamplingWithReplacementSmallestFirst(numDigits: number, length = 10): Generator<number[]> {
+    return function* backtrack(arr: number[] = []): Generator<number[]> {
+        if (arr.length === numDigits) yield arr;
+        else {
+            let max = arr.length>0?arr[0]+1:length;
+            for (let i=0; i<max; i++) {
+                yield* backtrack([i, ...arr]);
             }
         }
     }();
