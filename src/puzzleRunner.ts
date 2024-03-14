@@ -17,6 +17,6 @@ import(jsfile).then(clazz => {
 
     while (puzzle.runStep()) { }
 
-    console.log(`Final result: ${puzzle.result}`);
+    console.log(`[${puzzle.stepNumber.toString().padStart(5, ' ')}] Final result: ${puzzle.result}`);
     appendFileSync(benchfile, `[${(process.env['HOSTNAME'] ?? process.env['COMPUTERNAME'] ?? 'UNKNOWN').padStart(20, ' ').substring(0, 20)}] / ${(new Date()).toISOString()}: [${performance.measure(classname, "start").duration.toFixed(2).toString().padStart(10, ' ')}ms] Ran ${classname} resulting in ${puzzle.result} [${datafile}]\n`);
 })
