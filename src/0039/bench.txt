@@ -31,3 +31,6 @@
 [ip-172-31-43-116.eu-] / 2024-03-18T10:32:57.978Z: [      4.99ms] Ran a0039 resulting in 20 [./data/0039/input.txt]
 [ip-172-31-43-116.eu-] / 2024-03-18T10:34:04.845Z: [      7.86ms] Ran a0039 resulting in 840 [./data/0039/input.txt]
 [ip-172-31-43-116.eu-] / 2024-03-18T10:35:16.710Z: [      6.02ms] Ran a0039 resulting in 840 [./data/0039/input.txt]
+[ip-172-31-43-116.eu-] / 2024-03-18T10:37:28.113Z: [     21.81ms] Ran a0039 resulting in 720720 [./data/0039/input1m.txt]
+[ip-172-31-43-116.eu-] / 2024-03-18T10:38:20.571Z: [     17.59ms] Ran a0039 resulting in 720720 [./data/0039/input1m.txt]
+[ip-172-31-43-116.eu-] / 2024-03-18T10:38:24.671Z: [     35.19ms] Ran a0039 resulting in 465585120 [./data/0039/input1b.txt]
