@@ -5,3 +5,7 @@ export function IsPalindrome(str: string): boolean {
     }
     return true;
 }
+
+export function CountOccurrences(arr: Array<any>): Map<string, number> {
+    return new Map(Object.entries(arr.reduceRight((acc, cur) => { acc[cur]?++acc[cur]:acc[cur]=1; return acc; }, {})));
+}

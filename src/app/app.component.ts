@@ -54,6 +54,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0035: Circular Primes', routerLink: '0035/a'},
             {label: '0036: Double-base Palindromes', routerLink: '0036/a'},
             {label: '0037: Truncatable Primes', routerLink: '0037/a'},
+            {label: '0038: Pandigital Multiples', routerLink: '0038/a'},
         ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
