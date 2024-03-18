@@ -1,3 +1,5 @@
+import { PriorityHeap } from "./priorityHeap";
+
 let _NUMBERS_PRIME_cache: number[] = [2];
 let _NUMBERS_PRIME_lookup = new Set<number>();
 let _NUMBERS_PRIME_lastChecked = 3;
@@ -216,6 +218,42 @@ export function GetPeriod(d: number): number {
         n = (n % d) * 10;
     }
     return n>0?pos - nPos.get(n):0;
+}
+
+export type Triple = {
+    a: number;
+    b: number;
+    c: number;
+}
+
+/**
+ * Generate Pythagorean Triples, in increasing order of perimeter
+ * 
+ * Details: https://en.wikipedia.org/wiki/Pythagorean_triple 
+ * @returns a,b,c triples
+ */
+export function PythagoreanTriples(): Generator<Triple> {
+    let shouldPrecede = function(t1: Triple, t2: Triple) {
+        let t1P = t1.a + t1.b + t1.c;
+        let t2P = t2.a + t2.b + t2.c;
+        if (t1P !== t2P) return t1P > t2P;
+        else return t1.a >= t2.a;
+    };
+
+    let heap = new PriorityHeap(shouldPrecede);
+    heap.enqueue({a: 3, b: 4, c: 5});
+
+    return function* backtrack(): Generator<Triple> {
+        while (true) {
+            let t = heap.dequeue();
+            // compute the 3 new triples and enqueue them
+            if (t.a > t.b) yield {a: t.b, b: t.a, c: t.c};
+            else yield t;
+            heap.enqueue({a: t.a - 2*t.b + 2*t.c, b: 2*t.a - t.b + 2*t.c, c: 2*t.a - 2*t.b + 3*t.c});
+            heap.enqueue({a: t.a + 2*t.b + 2*t.c, b: 2*t.a + t.b + 2*t.c, c: 2*t.a + 2*t.b + 3*t.c});
+            heap.enqueue({a: -t.a + 2*t.b + 2*t.c, b: -2*t.a + t.b + 2*t.c, c: -2*t.a + 2*t.b + 3*t.c});
+        }
+    }();
 }
 
 export { Primes };
