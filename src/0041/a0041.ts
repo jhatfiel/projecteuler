@@ -5,17 +5,21 @@ import { CountOccurrences } from '../lib/String';
 
 export class a0041 extends Puzzle {
     input: number;
-    generator: Generator<number>;
+    //generator: Generator<number>;
+    primes: number[];
+    primeIndex = 0;
     sampleMode(): void { };
 
     _loadData(lines: string[]) {
         this.input = Number(lines[0]);
-        this.generator = PrimeGeneratorMax(7654321);
+        //this.generator = PrimeGeneratorMax(7654321);
+        // it's a little faster to generate all primes and only check from the largest down
+        this.primes = [...PrimeGeneratorMax(7654321)];
+        this.primeIndex = this.primes.length-1;
         /*
         for (let p of PrimeGeneratorMax(7654321))
             ;
             */
-        this.log(`Input = ${this.input}`);
     }
 
     isPanDigital(n) {
@@ -27,13 +31,16 @@ export class a0041 extends Puzzle {
     }
 
     _runStep(): boolean {
-        let next = this.generator.next();
-        let p = next.value;
-        let moreToDo = !next.done && p < 10**this.input;
+        //let next = this.generator.next();
+        //let p = next.value;
+        //let moreToDo = !next.done && p < 10**this.input;
+        let p = this.primes[this.primeIndex--];
+        let moreToDo = true
         if (moreToDo) {
             if (this.isPanDigital(p)) {
                 //this.log(`[${this.stepNumber.toString().padStart(5, ' ')}] p=${p}`);
                 this.result = p.toString();
+                moreToDo = false;
             }
         } else {
             /*
