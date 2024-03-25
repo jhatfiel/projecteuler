@@ -19,7 +19,7 @@ export function Combinations<T>(arr: T[], n: number): T[][] {
  * https://stackoverflow.com/a/32551801
  * @param arr Array of values to permute (in priority/lexigraphical order)
  */
-export function Permutations<T>(arr: T[]): Generator<T[]> {
+export function Permutations<T>(arr: T[], okSoFar: (len: number, data: T[]) => boolean = _ => true): Generator<T[]> {
     var length = arr.length,
         used = Array.from({length}, _ => false),
         data = Array<T>(length);
@@ -30,7 +30,7 @@ export function Permutations<T>(arr: T[]): Generator<T[]> {
                 if (!used[i]) {
                     used[i] = true;
                     data[pos] = arr[i];
-                    yield* backtracking(pos+1);
+                    if (okSoFar(pos+1, data)) yield* backtracking(pos+1);
                     used[i] = false;
                 }
     }(0);

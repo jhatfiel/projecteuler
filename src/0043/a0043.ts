@@ -11,7 +11,11 @@ export class a0043 extends Puzzle {
 
     _loadData(lines: string[]) {
         this.input = Number(lines[0]);
-        this.generator = Permutations(['0','1','2','3','4','5','6','7','8','9']);
+        this.generator = Permutations(['0','1','2','3','4','5','6','7','8','9'], (len: number, data: string[]) => {
+            if (len < 4) return true;
+            let sub = Number(data.slice(len-3, len).join(''));
+            return sub % this.primes[len-4] === 0;
+        });
     }
 
     _runStep(): boolean {
