@@ -12,7 +12,9 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
     // initialize to false - index into array is n = 2(i+1)+1 (so index 0 is 3, index 1 is 5, etc, and we only need n/2 length)
     // reverse is: i = (n-1)/2 - 1;
     let length = Math.floor((max-1)/2);
+    console.log(`PrimeGeneratorMax: allocate oddPrimes array ${length}`);
     let oddPrimes = Array.from({length}, _ => true);
+    console.log(`PrimeGeneratorMax: allocate done`);
     let crossover = Math.ceil((Math.sqrt(max) - 1)/2) - 1;
     //console.log(`Setting up, max=${n}, length=${length}, crossover=${crossover}`);
     _NUMBERS_PRIME_cache = [2];

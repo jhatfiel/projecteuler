@@ -17,7 +17,7 @@
     {
       "label": "Create src files",
       "type": "shell",
-      "command": "mkdir ${workspaceFolder}/src/${input:directory_name} && echo \"import { Puzzle } from '../lib/Puzzle';\n\nexport class a${input:directory_name} extends Puzzle {\n    input: number;\n    sampleMode(): void { };\n\n    _loadData(lines: string[]) {\n        this.input = Number(lines[0]);\n    }\n\n    _runStep(): boolean {\n        let moreToDo = false;\n        this.log(\\`[\\${this.stepNumber.toString().padStart(5, ' ')}] input=\\${this.input}\\`);\n        this.result = 'Result';\n        return moreToDo;\n    }\n}\" > ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts && code -r ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts",
+      "command": "mkdir ${workspaceFolder}/src/${input:directory_name} && echo \"import { Puzzle } from '../lib/Puzzle';\n\nexport class a${input:directory_name} extends Puzzle {\n    input: number;\n    sampleMode(): void { };\n\n    _loadData(lines: string[]) {\n        this.input = Number(lines[0]);\n    }\n\n    _runStep(): boolean {\n        let moreToDo = false;\n        this.log(\\`[\\${this.stepNumber.toString().padStart(5)}] input=\\${this.input}\\`);\n        this.result = 'Result';\n        return moreToDo;\n    }\n}\" > ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts && code -r ${workspaceFolder}/src/${input:directory_name}/a${input:directory_name}.ts",
     },
     {
       "label": "New directory",

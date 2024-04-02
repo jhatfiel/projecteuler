@@ -68,6 +68,15 @@ export class AppComponent implements AfterViewInit {
             {label: '0049: Prime Permutations', routerLink: '0049/a'},
             {label: '0050: Consecutive Prime Sum', routerLink: '0050/a'},
         ]},
+        {label: '51-75', items: [
+            {label: '0051: Prime Digit Replacements', routerLink: '0051/a'},
+        ]},
+        {label: '76-100', items: [
+        ]},
+        {label: '101-125', items: [
+        ]},
+        {label: '126-150', items: [
+        ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
             {label: 'PI day puzzle (/u/IvanR3D)', routerLink: 'ivanPi/a'},
