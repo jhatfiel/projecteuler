@@ -61,6 +61,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0042: Coded Triangle Numbers', routerLink: '0042/a'},
             {label: '0043: Sub-string Divisibility', routerLink: '0043/a'},
             {label: '0044: Pentagon Numbers', routerLink: '0044/a'},
+            {label: '0045: Triangular, Pentagonal, and Hexagonal', routerLink: '0045/a'},
         ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
