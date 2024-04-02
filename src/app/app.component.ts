@@ -63,6 +63,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0044: Pentagon Numbers', routerLink: '0044/a'},
             {label: '0045: Triangular, Pentagonal, and Hexagonal', routerLink: '0045/a'},
             {label: `0046: Goldbach's Other Conjecture`, routerLink: '0046/a'},
+            {label: '0047: Distinct Primes Factors', routerLink: '0047/a'},
         ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
