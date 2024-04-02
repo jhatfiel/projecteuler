@@ -99,7 +99,7 @@ export function PrimeFactors(n: number): Map<number, number> {
 }
 
 export function IsPrime(n: number): boolean {
-    while (_NUMBERS_PRIME_lastChecked < n) {
+    while (_NUMBERS_PRIME_lastChecked <= n) {
         Primes.next();
     }
     return _NUMBERS_PRIME_lookup.has(n);
