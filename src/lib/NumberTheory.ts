@@ -256,4 +256,20 @@ export function PythagoreanTriples(): Generator<Triple> {
     }();
 }
 
+export function ModPow(b: bigint|number, e: bigint|number, m: bigint|number): bigint {
+    let result = 1n;
+    let _b = BigInt(b);
+    let _e = BigInt(e);
+    let _m = BigInt(m);
+    if (_m <= 1) return 0n;
+    _b = _b % _m;
+    while (_e > 0) {
+        if (_e % 2n === 1n) result = (result * _b) % _m;
+        _e = _e >> 1n;
+        _b = (_b*_b) % _m;
+    }
+
+    return result;
+}
+
 export { Primes };
