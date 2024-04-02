@@ -66,6 +66,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0047: Distinct Primes Factors', routerLink: '0047/a'},
             {label: '0048: Self Powers', routerLink: '0048/a'},
             {label: '0049: Prime Permutations', routerLink: '0049/a'},
+            {label: '0050: Consecutive Prime Sum', routerLink: '0050/a'},
         ]},
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
