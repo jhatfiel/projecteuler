@@ -1,7 +1,9 @@
+import LargeSet from "large-set";
+import { BooleanArray } from "./BooleanArray";
 import { PriorityHeap } from "./priorityHeap";
 
 let _NUMBERS_PRIME_cache: number[] = [2];
-let _NUMBERS_PRIME_lookup = new Set<number>();
+let _NUMBERS_PRIME_lookup = new LargeSet<number>();
 let _NUMBERS_PRIME_lastChecked = 3;
 
 /**
@@ -13,7 +15,8 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
     // reverse is: i = (n-1)/2 - 1;
     let length = Math.floor((max-1)/2);
     console.log(`PrimeGeneratorMax: allocate oddPrimes array ${length}`);
-    let oddPrimes = Array.from({length}, _ => true);
+    //let oddPrimes = Array.from({length}, _ => true);
+    let oddPrimes = new BooleanArray(length, true);
     console.log(`PrimeGeneratorMax: allocate done`);
     let crossover = Math.ceil((Math.sqrt(max) - 1)/2) - 1;
     //console.log(`Setting up, max=${n}, length=${length}, crossover=${crossover}`);
@@ -23,7 +26,8 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
     yield 2;
     for (let i=0; i<crossover; i++) {
         //console.log(`${i}: ${oddPrimes.map(b => b?1:0).join(' ')}`);
-        if (oddPrimes[i]) {
+        if (oddPrimes.get(i)) {
+        //if (oddPrimes[i]) {
             let p = 2*(i+1)+1;
             _NUMBERS_PRIME_cache.push(p);
             _NUMBERS_PRIME_lookup.add(p);
@@ -31,21 +35,29 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
             yield p;
             // mark everything above p^2 as false
             for (let j=(p*p - 1)/2 - 1; j < length; j += p) {
-                oddPrimes[j] = false;
+                oddPrimes.set(j, false);
+                //oddPrimes[j] = false;
             }
         }
     }
 
+    //console.log(`Crossover: ${crossover}, length=${length}`);
     for (let i=crossover; i < length; i++) {
         //console.log(`${i}: ${oddPrimes.map(b => b?1:0).join(' ')}`);
-        if (oddPrimes[i]) {
+        //if (i % 10000000 === 0) console.log(`After crossover, index: ${i}`);
+        if (oddPrimes.get(i)) {
+        //if (oddPrimes[i]) {
             let p = 2*(i+1)+1;
+            //if (i > 155124118) console.log(`After crossover, found prime ${i} = ${p} ${_NUMBERS_PRIME_cache.length}`);
             _NUMBERS_PRIME_cache.push(p);
+            //if (i > 155124118) console.log(`After crossover, found prime ${i} = ${p} ${_NUMBERS_PRIME_lookup.size}`);
             _NUMBERS_PRIME_lookup.add(p);
+            //if (i > 155124118) console.log(`After crossover, found prime ${i} = ${p}`);
             _NUMBERS_PRIME_lastChecked=p;
             yield p;
         }
     }
+    console.log(`PrimeGeneratorMax: done`);
 }
 
 /**
