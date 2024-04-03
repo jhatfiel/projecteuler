@@ -201,8 +201,6 @@ export function NChooseK(n: number, k: number): bigint {
         num = 1n,
         den = 1n;
     for (let i=1n; i<=Math.min(k, n-k); i++) {
-        console.log(`Multiplying numerator by ${bn-i+1n}`);
-        console.log(`Multiplying denominator by ${i}`);
         num *= bn-i+1n;
         den *= i;
     }
