@@ -1,5 +1,8 @@
+import { performance } from "perf_hooks";
+
 export abstract class Puzzle {
-    constructor(public fn: string, protected log: (...data: any[]) => void = console.log) {
+    constructor(public fn: string, protected log: (...data: any[]) => void = Puzzle._log) {
+        performance.mark('start');
         if (fn && fn.startsWith('sample')) {
             this.log('SAMPLE MODE ACTIVE');
             this.inSampleMode = true;
@@ -9,6 +12,10 @@ export abstract class Puzzle {
     lines: string[];
     result = '';
     stepNumber = 0;
+
+    static _log(...data: any[]) {
+        console.log(`[${performance.measure('elapsed', 'start').duration.toFixed(2).toString().padStart(12, ' ')}ms]: ${data.toString()}`);
+    }
 
     loadData(lines: Array<string>) {
         if (this.inSampleMode) this.sampleMode();
