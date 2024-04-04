@@ -10,7 +10,7 @@ export class a0060 extends Puzzle {
 
     _loadData(lines: string[]) {
         this.input = Number(lines[0]);
-        this.primes = [...PrimeGeneratorMax(100000000)];
+        this.primes = [...PrimeGeneratorMax(10000)];
     }
 
     doesPairWork(a: number, b: number): boolean {
@@ -25,10 +25,10 @@ export class a0060 extends Puzzle {
     }
 
     _runStep(): boolean {
-        // stepNumber is which prime we will use up to
         let moreToDo = false;
         let lowest = Infinity;
-        for (let s of Subsets(this.primes.slice(1).filter(p => p < 10000), this.input, (subset) => {
+        // don't use 2, it's a useless prime for this puzzle
+        for (let s of Subsets(this.primes.slice(1), this.input, (subset) => {
             let arr = [...subset];
             if (arr.reduce((sum,n)=>sum+=n,0) > lowest) return false;
             //this.log(`okSoFar Current subset: ${arr}, should inspect ${arr.slice(-1)}`);
