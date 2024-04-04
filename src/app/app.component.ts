@@ -72,6 +72,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0051: Prime Digit Replacements', routerLink: '0051/a'},
             {label: '0052: Permuted Multiples', routerLink: '0052/a'},
             {label: '0053: Combinatoric Selections', routerLink: '0053/a'},
+            {label: '0054: Poker Hands', routerLink: '0054/a'},
         ]},
         {label: '76-100', items: [
         ]},
