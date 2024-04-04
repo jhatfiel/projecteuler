@@ -4,7 +4,7 @@ import { PriorityHeap } from "./priorityHeap";
 
 let _NUMBERS_PRIME_cache: number[] = [2];
 let _NUMBERS_PRIME_lookup = new LargeSet<number>();
-let _NUMBERS_PRIME_lastChecked = 3;
+let _NUMBERS_PRIME_lastChecked = 2;
 
 /**
  * Generate all prime numbers <= max;
@@ -22,7 +22,7 @@ export function* PrimeGeneratorMax(max: number): Generator<number> {
     //console.log(`Setting up, max=${n}, length=${length}, crossover=${crossover}`);
     _NUMBERS_PRIME_cache = [2];
     _NUMBERS_PRIME_lookup.add(2);
-    _NUMBERS_PRIME_lastChecked=3;
+    _NUMBERS_PRIME_lastChecked=2;
     yield 2;
     for (let i=0; i<crossover; i++) {
         //console.log(`${i}: ${oddPrimes.map(b => b?1:0).join(' ')}`);
@@ -69,6 +69,7 @@ export function* PrimeGenerator(): Generator<number> {
     for (let p of _NUMBERS_PRIME_cache) {
         yield p;
     }
+    _NUMBERS_PRIME_lastChecked++;
     while (true) {
         if (_NUMBERS_PRIME_cache.every(n => _NUMBERS_PRIME_lastChecked % n !== 0)) {
             _NUMBERS_PRIME_cache.push(_NUMBERS_PRIME_lastChecked);
@@ -113,10 +114,12 @@ export function PrimeFactors(n: number): Map<number, number> {
 }
 
 export function IsPrime(n: number): boolean {
-    while (_NUMBERS_PRIME_lastChecked <= n) {
+    if (_NUMBERS_PRIME_lastChecked >= n) return _NUMBERS_PRIME_lookup.has(n);
+
+    while (_NUMBERS_PRIME_lastChecked < Math.sqrt(n)) {
         Primes.next();
     }
-    return _NUMBERS_PRIME_lookup.has(n);
+    return _NUMBERS_PRIME_cache.every(p => n % p !== 0);
 }
 
 /**
