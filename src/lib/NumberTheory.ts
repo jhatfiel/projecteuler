@@ -69,7 +69,7 @@ export function* PrimeGenerator(): Generator<number> {
     for (let p of _NUMBERS_PRIME_cache) {
         yield p;
     }
-    _NUMBERS_PRIME_lastChecked++;
+    if (_NUMBERS_PRIME_lastChecked%2 === 0) _NUMBERS_PRIME_lastChecked++;
     while (true) {
         if (_NUMBERS_PRIME_cache.every(n => _NUMBERS_PRIME_lastChecked % n !== 0)) {
             _NUMBERS_PRIME_cache.push(_NUMBERS_PRIME_lastChecked);
