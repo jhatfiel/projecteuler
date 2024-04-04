@@ -75,6 +75,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0054: Poker Hands', routerLink: '0054/a'},
             {label: '0055: Lychrel Numbers', routerLink: '0055/a'},
             {label: '0056: Powerful Digit Sum', routerLink: '0056/a'},
+            {label: '0057: Square Root Convergents', routerLink: '0057/a'},
         ]},
         {label: '76-100', items: [
         ]},
