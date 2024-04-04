@@ -78,6 +78,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0057: Square Root Convergents', routerLink: '0057/a'},
             {label: '0058: Spiral Primes', routerLink: '0058/a'},
             {label: '0059: XOR Decryption', routerLink: '0059/a'},
+            {label: '0060: Prime Pair Sets', routerLink: '0060/a'},
         ]},
         {label: '76-100', items: [
         ]},

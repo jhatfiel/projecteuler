@@ -36,15 +36,20 @@ export function Permutations<T>(arr: T[], okSoFar: (len: number, data: T[]) => b
     }(0);
 }
 
-export function* Subsets<T>(arr: T[], length: number, start: number = 0): Generator<Set<T>> {
+export function* Subsets<T>(arr: T[], length: number, okSoFar: (subset: Set<T>) => boolean = _ => true, soFar: Set<T> = new Set(), start: number = 0): Generator<Set<T>> {
     if (start >= arr.length || length < 1) yield new Set();
     else {
+        let newSoFar = new Set(soFar);
         while (start <= arr.length - length) {
             let first = arr[start];
-            for (let subset of Subsets(arr, length - 1, start + 1)) {
-                subset.add(first);
-                yield subset;
+            newSoFar.add(first);
+            if (okSoFar(newSoFar)) {
+                for (let subset of Subsets(arr, length - 1, okSoFar, newSoFar, start + 1)) {
+                    subset.add(first);
+                    yield subset;
+                }
             }
+            newSoFar.delete(first);
             start++;
         }
     }
