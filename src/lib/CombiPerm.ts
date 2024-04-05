@@ -36,8 +36,17 @@ export function Permutations<T>(arr: T[], okSoFar: (len: number, data: T[]) => b
     }(0);
 }
 
+/**
+ * Generator that returns all subsets of an array in lexigraphical order
+ * 
+ * `[1,2,3,4,5], 3 => [[1,2,3],[1,2,4],[1,2,5],[1,3,4],[1,3,5],[1,4,5],[2,3,4],[2,3,5],[2,4,5],[3,4,5]]`
+ * 
+ * https://stackoverflow.com/a/32551801
+ * @param arr Array of values to permute (in priority/lexigraphical order)
+ * @param length Number of elements in each subset
+ */
 export function* Subsets<T>(arr: T[], length: number, okSoFar: (subset: Set<T>) => boolean = _ => true, soFar: Set<T> = new Set(), start: number = 0): Generator<Set<T>> {
-    if (start >= arr.length || length < 1) yield new Set();
+    if (start >= arr.length || length < 1) yield new Set(soFar);
     else {
         let newSoFar = new Set(soFar);
         while (start <= arr.length - length) {
@@ -45,7 +54,6 @@ export function* Subsets<T>(arr: T[], length: number, okSoFar: (subset: Set<T>) 
             newSoFar.add(first);
             if (okSoFar(newSoFar)) {
                 for (let subset of Subsets(arr, length - 1, okSoFar, newSoFar, start + 1)) {
-                    subset.add(first);
                     yield subset;
                 }
             }
