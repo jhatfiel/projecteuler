@@ -80,6 +80,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0059: XOR Decryption', routerLink: '0059/a'},
             {label: '0060: Prime Pair Sets', routerLink: '0060/a'},
             {label: '0061: Cyclical Figurate Numbers', routerLink: '0061/a'},
+            {label: '0062: Cubic Permutations', routerLink: '0062/a'},
         ]},
         {label: '76-100', items: [
         ]},
