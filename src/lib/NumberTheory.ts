@@ -287,4 +287,16 @@ export function ModPow(b: bigint|number, e: bigint|number, m: bigint|number): bi
     return result;
 }
 
+export function TriangleNumberGenerator  (max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(3, max); }
+export function SquareNumberGenerator    (max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(4, max); }
+export function PentagonalNumberGenerator(max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(5, max); }
+export function HexagonalNumberGenerator (max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(6, max); }
+export function HeptagonalNumberGenerator(max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(7, max); }
+export function OctagonalNumberGenerator (max: number = Number.MAX_SAFE_INTEGER): Generator<number> { return FigurateNumberGenerator(8, max); }
+
+export function* FigurateNumberGenerator(size: number, max: number = Number.MAX_SAFE_INTEGER): Generator<number> {
+    let n = 1, s = size-1;
+    while (n <= max) { yield n; n += s; s += size-2; }
+}
+
 export { Primes };
