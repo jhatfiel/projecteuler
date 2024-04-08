@@ -35,6 +35,7 @@ export class a0064 extends Puzzle {
 }
 
 // this doesn't work because decimal precision isn't good enough...
+// https://r-knott.surrey.ac.uk/Fibonacci/cfINTRO.html
 class SimpleContinuedFraction {
     digits: number[] = [];
     period = NaN;
