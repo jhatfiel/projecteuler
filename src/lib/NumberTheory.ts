@@ -1,6 +1,7 @@
 import LargeSet from "large-set";
 import { BooleanArray } from "./BooleanArray";
 import { PriorityHeap } from "./priorityHeap";
+import { Fraction } from "./Fraction";
 
 let _NUMBERS_PRIME_cache: number[] = [2];
 let _NUMBERS_PRIME_lookup = new LargeSet<number>();
@@ -297,6 +298,78 @@ export function OctagonalNumberGenerator (max: number = Number.MAX_SAFE_INTEGER)
 export function* FigurateNumberGenerator(size: number, max: number = Number.MAX_SAFE_INTEGER): Generator<number> {
     let n = 1, s = size-1;
     while (n <= max) { yield n; n += s; s += size-2; }
+}
+
+// This is a very very specialized ContinuedFraction class - it works for sqrt calculations and nothing else
+export class SQRTContinuedFraction {
+    int: number;
+    num: number;
+    denDiff: number;
+    approx: number;
+
+    rep: {digits: number[], len: number};
+
+    constructor(public base: number) {
+        this.int = Math.floor(Math.sqrt(base));
+        this.num = 1;
+        this.denDiff = this.int;
+        this.approx = this.int;
+
+        let digits: number[] = [];
+        let len = 0;
+        let seen = new Map<string, number>();
+
+        //console.log(`${this.debug()} START`);
+        digits.push(this.int);
+        while (!seen.has(this.partialToString())) {
+            len++;
+            seen.set(this.partialToString(), seen.size);
+            this.next();
+            digits.push(this.int);
+            //console.log(`${this.debug()}`);
+        }
+        len--;
+        digits.pop();
+        //len = seen.size - seen.get(this.partialToString());
+
+        this.rep = {digits, len};
+    }
+
+    next() {
+        // multiplying by the reciprical of the denominator
+        this.num = (this.base - this.denDiff**2) / this.num; // dividing by this.num might not always give us a natural number, but it does for these purposes...
+        // the int part is how many den's we need to get us down to approx (but not go over)
+        // i.e., we want max n such that SQRT(base) - n*den > 0 (n will be our new int)
+        this.int = Math.floor((this.denDiff+this.approx)/this.num);
+        // everything leftover after we subtract from this.int * this.num gives us our new denDiff
+        this.denDiff = this.int*this.num - this.denDiff;
+    }
+
+    debug(): string { return `${this.int},${this.num}/SQRT(${this.base})-${this.denDiff}`; }
+
+    partialToString(): string {return `${this.base},${this.int},${this.num},${this.denDiff}`; }
+
+    toString(): string {
+        return `[${this.rep.digits[0]};${this.rep.digits.slice(1,this.rep.digits.length-this.rep.len)}${(this.rep.digits.length-this.rep.len>1)?',':''}(${this.rep.digits.slice(this.rep.digits.length-this.rep.len)})]`;
+    }
+
+    toFraction(p: number): Fraction {
+        let nm1 = BigInt(this.rep.digits[0]);
+        let nm2 = 1n;
+        let dm1 = 1n;
+        let dm2 = 0n;
+
+        //console.log(`Fraction=${nm1}/${dm1}`);
+        for (let i=0; i<p; i++) {
+            let a = BigInt(this.rep.digits[1+i%this.rep.len]);
+            let n = a * nm1 + nm2;
+            let d = a * dm1 + dm2;
+            [nm1, nm2] = [n, nm1];
+            [dm1, dm2] = [d, dm1];
+            //console.log(`i=${i} a[i]=${a} n=${n}/${nm1}/${nm2}, d=${d}/${dm1}/${dm2} Fraction=${n}/${d}`);
+        }
+        return new Fraction(nm1,dm1);
+    }
 }
 
 export { Primes };
