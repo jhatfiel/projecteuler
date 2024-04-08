@@ -82,6 +82,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0061: Cyclical Figurate Numbers', routerLink: '0061/a'},
             {label: '0062: Cubic Permutations', routerLink: '0062/a'},
             {label: '0063: Powerful Digit Counts', routerLink: '0063/a'},
+            {label: '0064: Odd Period Square Roots', routerLink: '0064/a'},
         ]},
         {label: '76-100', items: [
         ]},
