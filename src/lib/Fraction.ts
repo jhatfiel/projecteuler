@@ -1,7 +1,13 @@
 import { GCD, LCM } from "./NumberTheory";
 
 export class Fraction {
-    constructor(public num: number, public den: number = 1) {}
+    num: bigint;
+    den: bigint;
+
+    constructor(num: number|bigint, den: number|bigint = 1n) {
+        this.num = BigInt(num);
+        this.den = BigInt(den);
+    }
 
     reduce(): Fraction {
         return this.scale(1/Number(GCD(this.num, this.den)));
@@ -14,14 +20,14 @@ export class Fraction {
     }
 
     add(b: Fraction): Fraction {
-        let lcm = Number(LCM(this.den, b.den));
+        let lcm = LCM(this.den, b.den);
         this.scale(lcm/this.den);
         this.num += b.num * (lcm/b.den);
         return this;
     }
 
     subtract(b: Fraction): Fraction {
-        let lcm = Number(LCM(this.den, b.den));
+        let lcm = LCM(this.den, b.den);
         this.scale(lcm/this.den);
         this.num -= b.num * (lcm/b.den);
         return this;

@@ -1,4 +1,3 @@
-import { Fraction } from '../lib/Fraction';
 import { Puzzle } from '../lib/Puzzle';
 
 export class a0065 extends Puzzle {
