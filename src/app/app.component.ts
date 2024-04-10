@@ -88,6 +88,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0067: Maximum Path Sum II', routerLink: '0067/a'},
             {label: '0068: Magic 5-gon Ring', routerLink: '0068/a'},
             {label: '0069: Totient Maximum', routerLink: '0069/a'},
+            {label: '0070: Totient Permutation', routerLink: '0070/a'},
         ]},
         {label: '76-100', items: [
         ]},
