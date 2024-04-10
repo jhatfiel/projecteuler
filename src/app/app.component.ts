@@ -85,6 +85,7 @@ export class AppComponent implements AfterViewInit {
             {label: '0064: Odd Period Square Roots', routerLink: '0064/a'},
             {label: '0065: Convergents of e', routerLink: '0065/a'},
             {label: '0066: Diophantine Equation', routerLink: '0066/a'},
+            {label: '0067: Maximum Path Sum II', routerLink: '0067/a'},
         ]},
         {label: '76-100', items: [
         ]},
