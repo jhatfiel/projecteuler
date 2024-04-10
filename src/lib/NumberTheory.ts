@@ -90,11 +90,12 @@ let Primes = PrimeGenerator();
  * @returns 
  * Mapping of prime factors to their power
  */
+let _NUMBERS_PRIME_factors = new Map<number, Map<number, number>>();
 export function PrimeFactors(n: number): Map<number, number> {
-    let result = new Map<number, number>();
-    if (n === 0) {
-        return result;
-    }
+    let result = _NUMBERS_PRIME_factors.get(n);
+    if (result !== undefined) return result;
+    result = new Map<number, number>();
+    if (n === 0) return result;
     let sqr_n = Math.sqrt(n);
     //console.log(`PrimeFactors(${n}) ${_NUMBERS_PRIME_lastChecked}`);
     while (_NUMBERS_PRIME_lastChecked <= sqr_n) {
@@ -111,6 +112,7 @@ export function PrimeFactors(n: number): Map<number, number> {
         result.set(p, cnt);
     })
     if (n !== 1) result.set(n, 1);
+    _NUMBERS_PRIME_factors.set(n, result);
     return result;
 }
 
@@ -370,6 +372,10 @@ export class SQRTContinuedFraction {
         }
         return new Fraction(nm1,dm1);
     }
+}
+
+export function Totient(n: number): number {
+    return [...PrimeFactors(n).keys()].reduce((acc, f) => acc = Math.round(acc*(1-1/f)),n);
 }
 
 export { Primes };
