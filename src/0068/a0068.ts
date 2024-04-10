@@ -42,7 +42,7 @@ export class a0068 extends Puzzle {
 
     sampleMode(): void { this.stringLen = 9; }
 
-    getSetNumbers = (arr: number[], setIndex: number): number[] => {
+    getSetNumbers(arr: number[], setIndex: number): number[] {
         // the 0th sum is easy, it's 0,1,2
         // everything between 0 and n-1 needs to take the next 2 numbers and the middle of the one before it
         let first = (setIndex===0)?arr[0]:arr[1+setIndex*2];
@@ -51,7 +51,7 @@ export class a0068 extends Puzzle {
         return [first, middle, last];
     }
 
-    calcSum = (arr: number[], setIndex: number): number => {
+    calcSum(arr: number[], setIndex: number): number {
         //this.log(`calcSum of ${setIndex}=${this.getSetNumbers(arr,setIndex)}`);
         return this.getSetNumbers(arr, setIndex).reduce((acc,n)=>acc+=n,0);
     }
