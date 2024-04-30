@@ -220,6 +220,8 @@ class State {
 
         // undefined just means we don't know who wins this position
         if (ae === undefined && be === undefined) {
+            // add in distance between rook and king file/rank - we want to minimize that as well right?
+
             // distance between kings?
             let awk = a.pieces.find(p => p instanceof King && p.player === 0);
             let abk = a.pieces.find(p => p instanceof King && p.player === 1);
@@ -380,7 +382,7 @@ class Engine {
         }
 
         let debug = false; //currentDepth<=2;
-        const buffer = debug?''.padStart(currentDepth, '+')+debugMoves.join(','):'';
+        const buffer = debug?''.padStart(currentDepth, '+')+debugMoves.join(',')+'/':'';
 
         let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
@@ -434,7 +436,12 @@ class Engine {
                             if (debug) console.error(`${buffer}WHITE found new ALPHA: ${max.evaluation} ${max.depth} ${max.moves}`);
                             alpha = {...max};
                         }
+                    } else {
+                        if (currentDepth === 0 || debug) console.error(`${buffer}WHITE not better: ${nsr.evaluation}/${nsr.depth}/${nsr.moves} vs ${max.evaluation}/${max.depth}/${max.moves}`);
                     }
+                }
+                if (max.evaluation === -1) {
+                    console.error(`${buffer}WHITE max still -1`);
                 }
                 result = max;
             } else {
