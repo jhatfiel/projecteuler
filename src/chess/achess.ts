@@ -24,7 +24,7 @@ export class achess extends Puzzle {
         //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
         
         let now = Date.now();
-        let ENGINE = new Engine(5);
+        let ENGINE = new Engine(3);
         console.error(`Starting engine ${ENGINE.maxDepth}`);
         
         let result = ENGINE.minimax(STATE);
@@ -191,8 +191,8 @@ export class State {
     isCheck(): boolean {
         let activePlayerKing = this.pieces.find(p => p instanceof King && p.player === this.activePlayer);
         if (!activePlayerKing) {
-            console.error(`activePlayerKing has gone missing...`);
             console.error(this.debugString().join('\n'));
+            throw new Error(`activePlayerKing has gone missing...`);
         }
         if (this.pieces.some(p => p.player !== this.activePlayer && p.validMoves(this).some(pos => pos.equals(activePlayerKing.position)))) return true;
         return false;
@@ -202,9 +202,7 @@ export class State {
         if (!this.nextMoves) {
             this.nextMoves = [];
             this.pieces.filter(p => p.player === this.activePlayer).forEach(p => {
-                //console.error(`getStates trying to move ${p}`);
                 p.validMoves(this).forEach(position => {
-                    //console.error(`getStates trying move ${position}`);
                     // try this move
                     let state = this.clone();
                     let move = {piece: p.clone(), position};
@@ -400,20 +398,24 @@ export class Engine {
     }
 
     minimax(state: State, currentDepth = 0, remainingDepth: number = this.maxDepth, alpha: MinimaxResult = { depth: this.maxDepth+1, moves: [] }, beta: MinimaxResult = { depth: this.maxDepth+1, moves: [] }, debugMoves: string[] = []): MinimaxResult {
-        alpha = {...alpha}; alpha.depth--;// = Math.max(alpha.depth-1, 0);
-        beta = {...beta}; beta.depth--;// = Math.max(beta.depth-1, 0);
+        alpha = {...alpha}; alpha.depth--;
+        beta = {...beta}; beta.depth--;
         if (currentDepth > 20 || alpha.depth < 0 || beta.depth < 0) {
-            console.error(`WHAT?`);
+            throw new Error(`Way too deep! ${currentDepth}/${alpha.depth}/${beta.depth}`);
         }
 
-        let debug = false; //currentDepth<=2;
-        let recordMoves = false;
-        const buffer = debug?''.padStart(currentDepth, '+')+debugMoves.join(',')+'/':'';
+        let debug = true; //currentDepth<=2;
+        let recordMoves = true || debug;
+        const buffer = debug?''.padStart(2*currentDepth, ' '):'';
 
         let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
         let evaluation = state.evaluate();
-        if (debug) console.error(`${buffer}minimax(${state}, ${currentDepth}, ${remainingDepth}, alpha=${alpha.evaluation}/${alpha.depth}, beta=${beta.evaluation}/${beta.depth}) evaluation=${evaluation}`);
+        if (debug) {
+            console.error(`${buffer}{`);
+            console.error(`${buffer}  positionKey: "${state}", currentDepth: "${currentDepth}", remainingDepth: "${remainingDepth}, alpha: "${alpha.evaluation}/${alpha.depth}", beta: "${beta.evaluation}/${beta.depth}", evaluation: "${evaluation}",`);
+            console.error(`${buffer}  movesToHere: "${debugMoves.join(',')}",`);
+        }
 
         result.evaluation = evaluation;
 
@@ -421,12 +423,13 @@ export class Engine {
             result.depth = remainingDepth;
             if (state.activePlayer === 0) {
                 let max: MinimaxResult;
-                if (debug) console.error(`${buffer}WHITE Next moves: ${[...state.getNextStates()].sort(State.SortWhite).map(([move]) => move)}`);
+                if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...state.getNextStates()].sort(State.SortWhite).map(([move]) => move)}",`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortWhite)) {
                     let nextPositionKey = nextState.toString();
                     let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
                     if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
                         if (debug) console.error(`${buffer}WHITE Trying move: ${nextMove} ${this.positionMinimax.has(nextPositionKey)?'T':'F'}:${nsr.evaluation}/${nsr.depth}`);
+                        if (debug) console.error(`${buffer}  ${nextMove}: `);
                         nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max&&max.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                         nsr.depth++;
                         if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
@@ -437,6 +440,7 @@ export class Engine {
                         nsr.depth++;
                         nsr.move = nextMove;
                         if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
+                        if (debug) console.error(`${buffer}  ${nextMove}: "${nsr.evaluation}/${nsr.depth}",`);
                         if (debug) console.error(`${buffer}WHITE already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${max?.evaluation}/${max?.depth}`);
                     }
                     if (!max || this.isPreferredForWhite(nsr, max)) {
@@ -457,7 +461,7 @@ export class Engine {
                 if (max) result = max;
             } else {
                 let min: MinimaxResult;
-                if (debug) console.error(`${buffer}BLACK Next moves: ${[...state.getNextStates()].sort(State.SortBlack).map(([move]) => move)}`);
+                if (debug) console.error(`${buffer}  player: "BLACK", nextMoves: "${[...state.getNextStates()].sort(State.SortBlack).map(([move]) => move)}",`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortBlack)) {
                     let nextPositionKey = nextState.toString();
                     let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
@@ -492,7 +496,10 @@ export class Engine {
             }
         }
 
-        if (debug) console.error(`${buffer}result: evaluation=${result.evaluation}, depth=${result.depth}, moves: ${result.moves}`);
+        if (debug) {
+            console.error(`${buffer}  evaluation: "${result.evaluation}", depth: "${result.depth}", moves: "${result.moves}"`);
+            console.error(`${buffer}}`);
+        }
         this.positionMinimax.set(positionKey, result);
         return result;
     }
