@@ -1,5 +1,4 @@
 e7 f5 g6
 g6g7
-g7g8
-g8h8
+g7h8
 h8h7

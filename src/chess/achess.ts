@@ -10,87 +10,98 @@ export class achess extends Puzzle {
     readline() { return this.lines[this.lineNum++]; }
 
     _runStep(): boolean {
-let STATE = new State();
+        let STATE = new State();
+        let positions: string[][] = [];
 
-let arr = this.readline().split(' ').map(s => new Position(s.charAt(0), s.charAt(1)));
-console.error(`Initial State: ${arr}`);
-STATE.addPiece(new King(0, arr[0])); // White King
-STATE.addPiece(new Rook(0, arr[1])); // White Rook
-STATE.addPiece(new King(1, arr[2])); // Black King
-console.error(STATE.toString());
-console.error(STATE.debugString().join('\n'));
-//console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
-
-let now = Date.now();
-let ENGINE = new Engine(9);
-console.error(`Starting engine ${ENGINE.maxDepth}`);
-
-let result = ENGINE.minimax(STATE);
-now = Date.now()-now;
-console.error(`Engine done ${now}ms`);
-console.error(`Known position: ${ENGINE.positionMinimax.size}`);
-console.error(`${[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).length} known positions > ${result.depth}`);
-/*
-[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).forEach(m => {
-    console.error(`Known position: ${m.evaluation},${m.depth},${m.moves}`);
-})
-*/
-
-///  code
-console.error(JSON.stringify(result));
-
-let key = STATE.toString();
-let moves:string[] = [];
-
-while (result.moves && result.evaluation === 1) {
-    console.error(`Result for ${STATE.toString()} = ${JSON.stringify(result)}`);
-    let move = result.moves[0];
-    //console.error(`Move chosen=${move} (end in ${result.moves.length})`);
-    moves.push(move);
-    console.log(move);
-    STATE.makeMove(STATE.moveFromString(move));
-    STATE.nextPlayer();
-    console.error(STATE.debugString().join('\n'));
-
-    if (STATE.evaluate() === 1) {
-        console.error(`We WIN!!! [${moves}]`);
-        break;
-    }
-    console.error(`Current position: ${STATE.toString()} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves (next move should be ${result.moves[1]})`);
-
-    key = STATE.toString();
-    result = ENGINE.positionMinimax.get(key);
-
-    let oppMoveStr: string = this.readline(); // A move made by the opponent, e.g. a2b1
-    if (false && !oppMoveStr) {
-        if (!result) throw new Error(`Unknown position: ${key}`);
-        oppMoveStr = result.moves[0];
-        console.error(`calculated opponent move: ${oppMoveStr}`);
-    } else {
-        console.error(`opponentMove: ${oppMoveStr}`);
-    }
-
-    if (oppMoveStr === undefined) {
-        console.error(`Didn't win in time!`);
-        break;
-    }
-
-    STATE.makeMove(STATE.moveFromString(oppMoveStr));
-    STATE.nextPlayer();
-    console.error(STATE.debugString().join('\n'));
-    key = STATE.toString();
-    result = ENGINE.positionMinimax.get(key);
-}
-console.error(`Final position: ${STATE.toString()} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves`);
-//console.error(STATE.debugString().join('\n'));
-if (!STATE.isCheck()) {
-    console.error(`!!!!!!!!!!!!!!FAIL!!!!!!!!!!!!!!!!!`);
-}
+        let arr = this.readline().split(' ').map(s => new Position(s.charAt(0), s.charAt(1)));
+        console.error(`Initial State: ${arr}`);
+        STATE.addPiece(new King(0, arr[0])); // White King
+        STATE.addPiece(new Rook(0, arr[1])); // White Rook
+        STATE.addPiece(new King(1, arr[2])); // Black King
+        console.error(STATE.toString());
+        positions.push(STATE.debugString());
+        console.error(STATE.debugString().join('\n'));
+        //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
+        
+        let now = Date.now();
+        let ENGINE = new Engine(11);
+        console.error(`Starting engine ${ENGINE.maxDepth}`);
+        
+        let result = ENGINE.minimax(STATE);
+        now = Date.now()-now;
+        console.error(`Engine done ${now}ms`);
+        console.error(`Known position: ${ENGINE.positionMinimax.size}`);
+        console.error(`${[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).length} known positions > ${result.depth}`);
+        /*
+        [...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).forEach(m => {
+            console.error(`Known position: ${m.evaluation},${m.depth},${m.moves}`);
+        })
+        */
+        
+        ///  code
+        console.error(JSON.stringify(result));
+        
+        let key = STATE.toString();
+        let moveListStr = `${result.depth}: ${STATE.toString()}`;
+        let moveNum = 1;
+        
+        while (result && result.move && result.evaluation === 1) {
+            console.error(`Result for ${STATE.toString()} = ${JSON.stringify(result)}`);
+            let moveStr = result.move;
+            //console.error(`Move chosen=${move} (end in ${result.moves.length})`);
+            let move = STATE.moveFromString(moveStr);
+            moveListStr += ` ${moveNum++}. ${STATE.moveToStandardString(move)}`;
+            console.log(moveStr);
+            STATE.makeMove(move);
+            STATE.nextPlayer();
+            positions.push(STATE.debugString());
+        
+            if (STATE.evaluate() === 1) {
+                moveListStr += '#';
+                console.error(`We WIN!!! ${now}ms / ${ENGINE.positionMinimax.size} [${moveListStr}]`);        
+                break;
+            }
+            if (STATE.isCheck()) moveListStr += '+';
+            console.error(`Current position: ${STATE.toString()} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves (next move should be ${result.moves[1]})`);
+        
+            key = STATE.toString();
+            result = ENGINE.positionMinimax.get(key);
+        
+            moveStr = this.readline(); // A move made by the opponent, e.g. a2b1
+            if (false && !moveStr) {
+                if (!result) throw new Error(`Unknown position: ${key}`);
+                moveStr = result.moves[0];
+                console.error(`calculated opponent move: ${moveStr}`);
+            } else {
+                console.error(`opponentMove: ${moveStr}`);
+            }
+            if (moveStr === undefined) {
+                console.error(`Didn't win in time!`);
+                break;
+            }
+        
+            move = STATE.moveFromString(moveStr);
+            moveListStr += ` ${STATE.moveToStandardString(move)}`;
+        
+            STATE.makeMove(move);
+            STATE.nextPlayer();
+            positions.push(STATE.debugString());
+            //console.error(STATE.debugString().join('\n'));
+            key = STATE.toString();
+            result = ENGINE.positionMinimax.get(key);
+        }
+        console.error(`Final position: ${STATE.toString()} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves`);
+        console.error(`Game:`);
+        console.error(positions.reduce((acc, b) => acc.map((line, ind) => line+b[ind]), ['', '', '', '', '', '', '', '', '', '']).join('\n'));
+        if (!STATE.isCheck()) {
+            console.error(`!!!!!!!!!!!!!!FAIL!!!!!!!!!!!!!!!!!`);
+            console.error(moveListStr);
+        }
         return false;
     }
 }
 
-class Position {
+export class Position {
     // file a-h
     // rank 1-8
     fileNum: number;
@@ -115,7 +126,7 @@ class Position {
     toString() { return this.file+this.rank; }
 }
 
-abstract class Piece {
+export abstract class Piece {
     abstract letter: string;
     abstract value: number;
     constructor(public player: number, public position: Position) {} // player=0 is white, 1 is black
@@ -134,10 +145,10 @@ abstract class Piece {
     }
 }
 
-type Move = { piece: Piece, position: Position };
-function moveToString(move: Move) { return `${move.piece.position.toString()}${move.position.toString()}`; }
+export type Move = { piece: Piece, position: Position };
+export function moveToString(move: Move) { return `${move.piece.position.toString()}${move.position.toString()}`; }
 
-class State {
+export class State {
     activePlayer = 0;
     pieces: Piece[] = [];
     nextMoves: string[];
@@ -152,6 +163,12 @@ class State {
         if (piece.player !== this.activePlayer) throw new Error(`Tried to move ${piece} but turn is ${this.activePlayer}`);
         if (pieceThere && piece.player === pieceThere.player) throw new Error(`You can't capture your own piece! ${piece} -> ${pieceThere}`);
         return {piece, position};
+    }
+
+    moveToStandardString(move: Move): string {
+        // e2h2 should look like Rh2
+        // if there was a piece there, it would be Rxh2 (not implementing that right now because there should be no captures in these games...)
+        return move.piece.letter + move.position.toString();
     }
 
     addPiece(p: Piece) { this.pieces.push(p); }
@@ -222,8 +239,6 @@ class State {
 
         // undefined just means we don't know who wins this position
         if (ae === undefined && be === undefined) {
-            // add in distance between rook and king file/rank - we want to minimize that as well right?
-
             // distance between kings?
             let awk = a.pieces.find(p => p instanceof King && p.player === 0);
             let abk = a.pieces.find(p => p instanceof King && p.player === 1);
@@ -232,6 +247,15 @@ class State {
             let ad = awk.position.distanceTo(abk.position);
             let bd = bwk.position.distanceTo(bbk.position);
             if (ad !== bd) return ad - bd;
+
+            // add in distance between rook and king file/rank - we want to minimize that as well right?
+            /*
+            let awr = a.pieces.find(p => p instanceof Rook && p.player === 0);
+            let bwr = b.pieces.find(p => p instanceof Rook && p.player === 0);
+            ad = awr.position.distanceTo(abk.position);
+            bd = bwr.position.distanceTo(bbk.position);
+            if (ad !== bd) return ad - bd;
+            */
 
             // available moves?
             let ans = a.getNextMoves();
@@ -310,7 +334,7 @@ class State {
     }
 
     debugString(): string[] {
-        let lines: string[] = [' ABCDEFGH '];
+        let lines: string[] = [' ABCDEFGH'];
         for (let rank=8; rank>0; rank--) {
             let rankStr = rank.toString();
             let line = rankStr;
@@ -319,30 +343,24 @@ class State {
                 let piece = this.getPieceAtPosition(new Position(file, rankStr));
                 line += piece?.getPieceLetter() ?? '.';
             }
-            line += rankStr;
             lines.push(line);
         }
-        lines.push(' ABCDEFGH ');
+        lines.push(' ABCDEFGH');
         return lines;
     }
 }
 
-type MinimaxResult = {
+export type MinimaxResult = {
     evaluation?: number|undefined; // 1=WHITE WIN, 0=DRAW, -1=BLACK WIN, undefined=UNKNOWN
     depth?: number|undefined; // how far deep have we evaluated
     moves?: string[]; // moves to get to the specified evaluation, or empty array for undefined evaluation
+    move?: string;
 }
 
-class Engine {
+export class Engine {
     positionMinimax = new Map<string, MinimaxResult>();
-    evaluating = new Set<string>();
 
     constructor(public maxDepth: number) {}
-
-    isBetterForWhite(a: MinimaxResult, b: MinimaxResult): boolean {
-        if (a.evaluation === 1) return b.evaluation !== 1 || a.depth < b.depth;
-        if (a.evaluation === undefined) return b.evaluation !== 1 || a.depth > b.depth;
-    }
 
     // need to clarify what an undefined evaluation means.
     // undefined means we don't know the result after "depth" moves.
@@ -377,9 +395,9 @@ class Engine {
     }
 
     minimax(state: State, currentDepth = 0, remainingDepth: number = this.maxDepth, alpha: MinimaxResult = { depth: this.maxDepth+1, moves: [] }, beta: MinimaxResult = { depth: this.maxDepth+1, moves: [] }, debugMoves: string[] = []): MinimaxResult {
-        alpha = {...alpha}; alpha.depth = Math.max(alpha.depth-1, 0);
-        beta = {...beta}; beta.depth = Math.max(beta.depth-1, 0);
-        if (currentDepth > 20) {
+        alpha = {...alpha}; alpha.depth--;// = Math.max(alpha.depth-1, 0);
+        beta = {...beta}; beta.depth--;// = Math.max(beta.depth-1, 0);
+        if (currentDepth > 20 || alpha.depth < 0 || beta.depth < 0) {
             console.error(`WHAT?`);
         }
 
@@ -388,47 +406,39 @@ class Engine {
 
         let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
-        this.evaluating.add(positionKey);
-        // process state
         let evaluation = state.evaluate();
         if (debug) console.error(`${buffer}minimax(${state}, ${currentDepth}, ${remainingDepth}, alpha=${alpha.evaluation}/${alpha.depth}, beta=${beta.evaluation}/${beta.depth}) evaluation=${evaluation}`);
 
         result.evaluation = evaluation;
 
         if (result.evaluation === undefined && remainingDepth > 0) {
+            result.depth = remainingDepth;
             if (state.activePlayer === 0) {
-                let max: MinimaxResult = { evaluation: -1, depth: 1, moves: [] };
+                let max: MinimaxResult;
                 if (debug) console.error(`${buffer}WHITE Next moves: ${[...state.getNextStates()].sort(State.SortWhite).map(([move]) => move)}`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortWhite)) {
                     let nextPositionKey = nextState.toString();
-                    if (this.evaluating.has(nextPositionKey)) continue;
                     let nsr = this.positionMinimax.get(nextPositionKey);
                     if (!nsr) {
                         nsr = {depth: 0, moves: []};
                     } else {
                         nsr = {...nsr};
+                        nsr.depth++;
+                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
+                        nsr.move = nextMove;
                     }
-                    //if (nsr.evaluation === undefined && (nsr.depth < max.depth || (max.evaluation !== 1 && nsr.depth === max.depth))) {
-                    if (nsr.evaluation === undefined && nsr.depth < max.depth) {
-                        // we have to find out if this gets any better but we probably need to limit it to max.depth yeah?
+                    if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
                         if (debug) console.error(`${buffer}WHITE Trying move: ${nextMove} ${this.positionMinimax.has(nextPositionKey)?'T':'F'}:${nsr.evaluation}/${nsr.depth}`);
-                        nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, [...debugMoves, nextMove])};
+                        nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max&&max.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
+                        nsr.depth++;
+                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
+                        nsr.move = nextMove;
                         if (debug) console.error(`${buffer}WHITE For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
-                        if (debug) console.error(`${buffer}WHITE already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${max.evaluation}/${max.depth}`);
+                        if (debug) console.error(`${buffer}WHITE already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${max?.evaluation}/${max?.depth}`);
                     }
-                    nsr.depth++;
-                    /*
-                    if (nsr.evaluation === undefined && nsr.depth >= max.depth && max.evaluation === 1) {
-                        if (debug) console.error(`${buffer}WHITE skipping ${nextMove}(${nsr.evaluation}/${nsr.depth}) can't be better ${max.evaluation}/${max.depth}`);
-                        continue;
-                    }
-                    */
-                    if (this.isPreferredForWhite(nsr, max)) {
-                        //(nsr.evaluation === undefined && nsr.depth < max.depth) ||
-                        //(nsr.evaluation === undefined && max.evaluation === undefined && nsr.depth <= max.depth)) 
+                    if (!max || this.isPreferredForWhite(nsr, max)) {
                         max = nsr;
-                        max.moves = [nextMove, ...max.moves];
                         if (currentDepth === 0 || debug) console.error(`${buffer}WHITE found new max: ${max.evaluation} ${max.depth} ${max.moves} (${[...this.positionMinimax.values()].filter(m => m.depth > max.depth).length} known positions > ${max.depth})`);
                         if (beta.evaluation !== undefined && this.isPreferredForWhite(max, beta)) {
                             if (debug) console.error(`${buffer}WHITE BETA BREAK: ${max.evaluation} ${max.depth} ${max.moves}`);
@@ -436,73 +446,61 @@ class Engine {
                         }
                         if (this.isPreferredForWhite(max, alpha)) {
                             if (debug) console.error(`${buffer}WHITE found new ALPHA: ${max.evaluation} ${max.depth} ${max.moves}`);
-                            alpha = {...max};
+                            alpha = max;
                         }
                     } else {
                         if (currentDepth === 0 || debug) console.error(`${buffer}WHITE not better: ${nsr.evaluation}/${nsr.depth}/${nsr.moves} vs ${max.evaluation}/${max.depth}/${max.moves}`);
                     }
                 }
-                if (max.evaluation === -1) {
-                    if (false) console.error(`${buffer}WHITE max still -1`);
-                }
-                result = max;
+                if (max) result = max;
             } else {
-                let min: MinimaxResult = { evaluation: 1, depth: 1, moves: [] };
+                let min: MinimaxResult;
                 if (debug) console.error(`${buffer}BLACK Next moves: ${[...state.getNextStates()].sort(State.SortBlack).map(([move]) => move)}`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortBlack)) {
                     let nextPositionKey = nextState.toString();
-                    if (this.evaluating.has(nextPositionKey)) continue;
                     let nsr = this.positionMinimax.get(nextPositionKey);
                     if (!nsr) {
                         nsr = {depth: 0, moves: []};
                     } else {
                         nsr = {...nsr};
+                        nsr.depth++;
+                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
+                        nsr.move = nextMove;
                     }
-                    if (nsr.evaluation === undefined && nsr.depth < min.depth) {
-                        // we have to find out if this gets any better but we probably need to limit it to min.depth yeah?
+                    if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
                         if (debug) console.error(`${buffer}BLACK Trying move: ${nextMove} ${this.positionMinimax.has(nextPositionKey)?'T':'F'}:${nsr.evaluation}/${nsr.depth}`);
-                        nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min.evaluation===-1?min.depth:remainingDepth)-1, alpha, beta, [...debugMoves, nextMove])};
+                        nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min&&min.evaluation===-1?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
+                        nsr.depth++;
+                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
+                        nsr.move = nextMove;
                         if (debug) console.error(`${buffer}BLACK For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
-                        if (debug) console.error(`${buffer}BLACK already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${min.evaluation}/${min.depth}`);
+                        if (debug) console.error(`${buffer}BLACK already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${min?.evaluation}/${min?.depth}`);
                     }
-                    nsr.depth++;
-                    /*
-                    if (nsr.evaluation === undefined && nsr.depth >= min.depth && min.evaluation === -1) {
-                        if (debug) console.error(`${buffer}BLACK skipping ${nextMove}(${nsr.evaluation}/${nsr.depth}) can't be better ${min.evaluation}/${min.depth}`);
-                        continue;
-                    }
-                    */
-                    if (this.isPreferredForBlack(nsr, min)) {
-                        //(nsr.evaluation === undefined && nsr.depth < min.depth) ||
-                        //(nsr.evaluation === undefined && min.evaluation === undefined && nsr.depth <= min.depth))
+                    if (!min||this.isPreferredForBlack(nsr, min)) {
                         min = nsr;
-                        min.moves = [nextMove, ...nsr.moves];
                         if (debug) console.error(`${buffer}BLACK found new min: ${min.evaluation} ${min.depth} ${min.moves}`);
-
-                        if (alpha.evaluation !== undefined && this.isPreferredForBlack(min, alpha)) {
+                        if (alpha.evaluation !== undefined &&this.isPreferredForBlack(min, alpha)) {
                             if (debug) console.error(`${buffer}BLACK ALPHA BREAK: ${min.evaluation} ${min.depth} ${min.moves}`);
                             break;
                         }
-
                         if (this.isPreferredForBlack(min, beta)) {
                             if (debug) console.error(`${buffer}BLACK found new BETA: ${min.evaluation} ${min.depth} ${min.moves}`);
-                            beta = {...min};
+                            beta = min;
                         }
                     }
                 }
-                result = min;
+                if (min) result = min;
             }
         }
 
         if (debug) console.error(`${buffer}result: evaluation=${result.evaluation}, depth=${result.depth}, moves: ${result.moves}`);
-        this.evaluating.delete(positionKey);
         this.positionMinimax.set(positionKey, result);
         return result;
     }
 }
 
-class Rook extends Piece {
+export class Rook extends Piece {
     letter = 'R';
     value = 5;
     validMoves(state: State) { 
@@ -522,7 +520,8 @@ class Rook extends Piece {
         return positions;
     }
 }
-class King extends Piece {
+
+export class King extends Piece {
     letter = 'K';
     value = 900;
     validMoves(state: State) {

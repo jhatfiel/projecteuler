@@ -2,5 +2,4 @@ a3 b3 a5
 a5a6
 a6a7
 a7a8
-a8b8
-b8a8
+a8a7
