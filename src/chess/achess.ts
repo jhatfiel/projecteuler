@@ -50,6 +50,7 @@ while (result.moves && result.evaluation === 1) {
     console.log(move);
     STATE.makeMove(STATE.moveFromString(move));
     STATE.nextPlayer();
+    console.error(STATE.debugString().join('\n'));
 
     if (STATE.evaluate() === 1) {
         console.error(`We WIN!!! [${moves}]`);
@@ -76,6 +77,7 @@ while (result.moves && result.evaluation === 1) {
 
     STATE.makeMove(STATE.moveFromString(oppMoveStr));
     STATE.nextPlayer();
+    console.error(STATE.debugString().join('\n'));
     key = STATE.toString();
     result = ENGINE.positionMinimax.get(key);
 }
@@ -370,7 +372,7 @@ class Engine {
         // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
         // But draw is a different case.
         // I'm going to say it's better to keep the evaluation undefined for equal or longer than it is to draw or lose
-        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && (a.depth > b.depth);
+        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && (a.depth >= b.depth);
         return optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth); // put off the draw/loss as long as possible
     }
 
@@ -441,7 +443,7 @@ class Engine {
                     }
                 }
                 if (max.evaluation === -1) {
-                    console.error(`${buffer}WHITE max still -1`);
+                    if (false) console.error(`${buffer}WHITE max still -1`);
                 }
                 result = max;
             } else {
