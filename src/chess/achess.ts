@@ -24,7 +24,7 @@ export class achess extends Puzzle {
         //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
         
         let now = Date.now();
-        let ENGINE = new Engine(11);
+        let ENGINE = new Engine(5);
         console.error(`Starting engine ${ENGINE.maxDepth}`);
         
         let result = ENGINE.minimax(STATE);
@@ -62,13 +62,13 @@ export class achess extends Puzzle {
                 break;
             }
             if (STATE.isCheck()) moveListStr += '+';
-            console.error(`Current position: ${STATE.toString()} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves (next move should be ${result.moves[1]})`);
-        
+
             key = STATE.toString();
             result = ENGINE.positionMinimax.get(key);
+            console.error(`Current position: ${key} ${STATE.isCheck()} ${STATE.getNextStates().size} available moves (next move should be ${result.move})`);
         
             moveStr = this.readline(); // A move made by the opponent, e.g. a2b1
-            if (false && !moveStr) {
+            if (false || !moveStr) {
                 if (!result) throw new Error(`Unknown position: ${key}`);
                 moveStr = result.moves[0];
                 console.error(`calculated opponent move: ${moveStr}`);
@@ -369,28 +369,33 @@ export class Engine {
     // so, is undefined/0 preferred to 1/3?  No.  It might be, but we need to extend them out to the same depth first!
     // then we can confidently say that undefined/3 is WORSE than 1/3
 
-    isPreferredForWhite(a: MinimaxResult, b: MinimaxResult): boolean { return this.isPreferredForPlayer(a, b, 1); }
-    isPreferredForBlack(a: MinimaxResult, b: MinimaxResult): boolean { return this.isPreferredForPlayer(a, b, -1); }
+    isPreferredForWhite(a: MinimaxResult, b: MinimaxResult): boolean {
+        if (a.evaluation === 1) return b.evaluation !== 1 || a.depth < b.depth; // winning and closer or b is not winning
+        if (a.evaluation === undefined) return b.evaluation !== 1 && (a.depth >= b.depth);
+        // white should want to just get it over with, draw is a loss when you get down to it
+        return a.evaluation > b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth);
+    }
+    isPreferredForBlack(a: MinimaxResult, b: MinimaxResult): boolean { 
+        if (a.evaluation === -1) return b.evaluation !== -1 || a.depth < b.depth; // winning and closer or b is not winning
+        if (a.evaluation === undefined) return b.evaluation !== -1 && (a.depth >= b.depth);
+        // white should want to just get it over with, draw is a loss when you get down to it
+        return a.evaluation < b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth);
+    }
 
     isPreferredForPlayer(a: MinimaxResult, b: MinimaxResult, optimalEvaluation: number): boolean {
-        //if (a.evaluation === undefined && b.evaluation !== undefined && a.depth < b.depth) throw new Error(`Can't continue: UNK/${a.depth} vs ${b.evaluation}/${b.depth}`);
-        //if (b.evaluation === undefined && a.evaluation !== undefined && b.depth < a.depth) throw new Error(`Can't continue: ${a.evaluation}/${a.depth} vs UNK/${b.depth}`);
-        //if ((a.evaluation === undefined && b.evaluation === undefined) && a.depth !== b.depth) throw new Error(`Can't continue: ${a.evaluation}/${a.depth} vs ${b.evaluation}/${b.depth}`);
         //         b.eval:       1         undefined         0          -1
         // a.evaluation:
         //  1                 closer         true          true         true  (a=1 means we KNOW we will win in ad moves.  It's better than undefined/0/-1, As long as that's < bd, we're good!)
         //  undefined         false          false         true         true (we always pick unknown if the alternative is draw or losing)
         //  0                 false          false        further       true (draw games, better than losing! or at least further away)
         //  -1                false          false         false       further (losing sucks, so it's always worse, unless it's further away)
-        //if (b.evaluation === Infinity) return false;
-        //if (b.evaluation === -Infinity) return true;
         if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth < b.depth; // winning and closer or b is not winning
         // see, this is tough - a=undefined means we won't lose or draw after depth moves we know.  But if we draw at move 5 and lose at move 6, was it better that we picked a?
         // i.e., is undefined/6 better than 0/5?
         // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
         // But draw is a different case.
         // I'm going to say it's better to keep the evaluation undefined for equal or longer than it is to draw or lose
-        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && (a.depth >= b.depth);
+        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && (a.depth > b.depth);
         return optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth); // put off the draw/loss as long as possible
     }
 
@@ -402,6 +407,7 @@ export class Engine {
         }
 
         let debug = false; //currentDepth<=2;
+        let recordMoves = false;
         const buffer = debug?''.padStart(currentDepth, '+')+debugMoves.join(',')+'/':'';
 
         let result: MinimaxResult = {depth: 0, moves: []};
@@ -418,23 +424,19 @@ export class Engine {
                 if (debug) console.error(`${buffer}WHITE Next moves: ${[...state.getNextStates()].sort(State.SortWhite).map(([move]) => move)}`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortWhite)) {
                     let nextPositionKey = nextState.toString();
-                    let nsr = this.positionMinimax.get(nextPositionKey);
-                    if (!nsr) {
-                        nsr = {depth: 0, moves: []};
-                    } else {
-                        nsr = {...nsr};
-                        nsr.depth++;
-                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
-                        nsr.move = nextMove;
-                    }
+                    let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
                     if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
                         if (debug) console.error(`${buffer}WHITE Trying move: ${nextMove} ${this.positionMinimax.has(nextPositionKey)?'T':'F'}:${nsr.evaluation}/${nsr.depth}`);
                         nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max&&max.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                         nsr.depth++;
-                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
+                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         nsr.move = nextMove;
                         if (debug) console.error(`${buffer}WHITE For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
+                        nsr = {...nsr};
+                        nsr.depth++;
+                        nsr.move = nextMove;
+                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         if (debug) console.error(`${buffer}WHITE already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${max?.evaluation}/${max?.depth}`);
                     }
                     if (!max || this.isPreferredForWhite(nsr, max)) {
@@ -458,29 +460,25 @@ export class Engine {
                 if (debug) console.error(`${buffer}BLACK Next moves: ${[...state.getNextStates()].sort(State.SortBlack).map(([move]) => move)}`);
                 for (let [nextMove, nextState] of [...state.getNextStates()].sort(State.SortBlack)) {
                     let nextPositionKey = nextState.toString();
-                    let nsr = this.positionMinimax.get(nextPositionKey);
-                    if (!nsr) {
-                        nsr = {depth: 0, moves: []};
-                    } else {
-                        nsr = {...nsr};
-                        nsr.depth++;
-                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
-                        nsr.move = nextMove;
-                    }
+                    let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
                     if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
                         if (debug) console.error(`${buffer}BLACK Trying move: ${nextMove} ${this.positionMinimax.has(nextPositionKey)?'T':'F'}:${nsr.evaluation}/${nsr.depth}`);
                         nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min&&min.evaluation===-1?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                         nsr.depth++;
-                        if (debug) nsr.moves = [nextMove, ...nsr.moves];
                         nsr.move = nextMove;
+                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         if (debug) console.error(`${buffer}BLACK For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
+                        nsr = {...nsr};
+                        nsr.depth++;
+                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
+                        nsr.move = nextMove;
                         if (debug) console.error(`${buffer}BLACK already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${min?.evaluation}/${min?.depth}`);
                     }
                     if (!min||this.isPreferredForBlack(nsr, min)) {
                         min = nsr;
                         if (debug) console.error(`${buffer}BLACK found new min: ${min.evaluation} ${min.depth} ${min.moves}`);
-                        if (alpha.evaluation !== undefined &&this.isPreferredForBlack(min, alpha)) {
+                        if (alpha.evaluation !== undefined && this.isPreferredForBlack(min, alpha)) {
                             if (debug) console.error(`${buffer}BLACK ALPHA BREAK: ${min.evaluation} ${min.depth} ${min.moves}`);
                             break;
                         }

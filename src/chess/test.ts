@@ -41,6 +41,13 @@ function testPosition(caseNum: number, krkStr: string, correctMoveList: string[]
                                  ["e7e6","g6g7","f5g5","g7h7","e6f7","h7h6","g5e5","h6h7","e5h5"],
                                  ["e7e6","g6g7","f5f3","g7g8","e6e7","g8h8","e7f7","h8h7","f3h3"],
                                 ], depth);
-
+    testPosition(6, 'a3 b3 a5', [["b3b4","a5a6","a3a4","a6a7","a4a5","a7a8","a5b6","a8b8","b4c4","b8a8","c4c8"]], depth);
+    /*
+    should be 13 steps, not 11
+    testPosition(7, 'c7 b6 e8', [
+                                 ["b6e6","e8f8","c7d7","f8g8","d7e8","g8h8","e6g6","h8h7","e8f7","h7h8","g6h6"],
+                                 ["b6e6","e8f8","c7d8","f8g8","d8e8","g8h8","e6g6","h8h7","e8f7","h7h8","g6h6"]
+                                ], depth);
+                                */
     console.log();
 })
