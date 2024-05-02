@@ -24,7 +24,7 @@ export class achess extends Puzzle {
         //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
         
         let now = Date.now();
-        let ENGINE = new Engine(3);
+        let ENGINE = new Engine(13);
         console.error(`Starting engine ${ENGINE.maxDepth}`);
         
         let result = ENGINE.minimax(STATE);
@@ -58,7 +58,7 @@ export class achess extends Puzzle {
         
             if (STATE.evaluate() === 1) {
                 moveListStr += '#';
-                console.error(`We WIN!!! ${now}ms / ${ENGINE.positionMinimax.size} [${moveListStr}]`);        
+                console.error(`We WIN!!! ${now}ms / ${ENGINE.positionMinimax.size} [${moveListStr}]`);
                 break;
             }
             if (STATE.isCheck()) moveListStr += '+';
@@ -404,8 +404,8 @@ export class Engine {
             throw new Error(`Way too deep! ${currentDepth}/${alpha.depth}/${beta.depth}`);
         }
 
-        let debug = true; //currentDepth<=2;
-        let recordMoves = true || debug;
+        let debug = false; //currentDepth<=2;
+        let recordMoves = false || debug;
         const buffer = debug?''.padStart(2*currentDepth, ' '):'';
 
         let result: MinimaxResult = {depth: 0, moves: []};
@@ -436,6 +436,10 @@ export class Engine {
                         nsr.move = nextMove;
                         if (debug) console.error(`${buffer}WHITE For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
+                        if (nsr.depth+1 > remainingDepth) {
+                            let skip = true;
+                            if (skip) continue;
+                        }
                         nsr = {...nsr};
                         nsr.depth++;
                         nsr.move = nextMove;
@@ -473,10 +477,14 @@ export class Engine {
                         if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         if (debug) console.error(`${buffer}BLACK For move: ${nextMove}, got ${nsr.evaluation}/${nsr.depth}`);
                     } else {
+                        if (nsr.depth+1 > remainingDepth) {
+                            let skip = true;
+                            if (skip) continue;
+                        }
                         nsr = {...nsr};
                         nsr.depth++;
-                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         nsr.move = nextMove;
+                        if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                         if (debug) console.error(`${buffer}BLACK already calculated ${nextMove}(${nsr.evaluation}/${nsr.depth}) far enough ${min?.evaluation}/${min?.depth}`);
                     }
                     if (!min||this.isPreferredForBlack(nsr, min)) {
