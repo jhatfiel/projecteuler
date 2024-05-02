@@ -1,5 +1,5 @@
 {
-    "files.exclude":{ "**/*.js": true,
+    "files.exclude":{ "*/*.js": true,
                     "**/*.js.map": true
                 },
     "debug.console.collapseIdenticalLines": false,

@@ -333,6 +333,32 @@ export class State {
             ].map(p => p?p.position.toString():'  ').join('')}`;
     }
 
+    toFEN(): string {
+        let fen = '';
+        for (let rankNum=7; rankNum>=0; rankNum--) {
+            //let rankPieces = this.pieces.filter(p => p.position.rankNum === rankNum).sort((a,b) => a.position.file.localeCompare(b.position.file));
+            let line = {a: '', b: '', c: '', d: '', e: '', f: '', g: '', h: ''};
+            this.pieces.filter(p => p.position.rankNum === rankNum).forEach(p => line[p.position.file] = p.getPieceLetter());
+            let num = 0;
+            Object.keys(line).forEach(f => {
+                if (line[f]) {
+                    if (num) {
+                        fen += num;
+                    }
+                    num = 0;
+                    fen += line[f];
+                } else {
+                    num++;
+                }
+            })
+            if (num) fen += num;
+            if (rankNum>0) fen += '/'
+        }
+        fen += ' ' + (this.activePlayer===0?'w':'b');
+        fen += ' -';
+        return fen;
+    }
+
     debugString(): string[] {
         let lines: string[] = [' ABCDEFGH'];
         for (let rank=8; rank>0; rank--) {

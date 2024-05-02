@@ -27,6 +27,8 @@
     "chalk": "^5.3.0",
     "d3-array": "^3.2.4",
     "drange": "^2.0.1",
+    "esm-hook": "^0.1.4",
+    "js-chess-engine": "^1.0.2",
     "large-set": "^1.0.3",
     "node-dijkstra": "^2.5.0",
     "phaser": "^3.70.0",
@@ -35,6 +37,7 @@
     "randexp": "^0.5.3",
     "rxjs": "~7.8.0",
     "spark-md5": "^3.0.2",
+    "stockfish": "^16.0.0",
     "terminal-kit": "^3.0.1",
     "tslib": "^2.3.0",
     "zone.js": "~0.13.0"
