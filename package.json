@@ -28,7 +28,6 @@
     "d3-array": "^3.2.4",
     "drange": "^2.0.1",
     "esm-hook": "^0.1.4",
-    "js-chess-engine": "^1.0.2",
     "large-set": "^1.0.3",
     "node-dijkstra": "^2.5.0",
     "phaser": "^3.70.0",

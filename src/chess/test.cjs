@@ -1,5 +1,5 @@
 require('esm-hook');
-const { Engine, King, Rook, State, Position } = require('../../dist/out-tsc/chess/achess.js');
+const { Engine, King, Rook, State, positionFromString } = require('../../dist/out-tsc/chess/achess.js');
 var INIT_ENGINE = require('../../node_modules/stockfish/src/stockfish-nnue-16.js');
 
 class StockfishWrapper {
@@ -57,13 +57,16 @@ class StockfishWrapper {
         });
     }
 
+    static terminate() {
+        StockfishWrapper.handle.terminate();
+    }
 }
 
 async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     if (depth < solutionDepth) return;
     let STATE = new State();
     let krkArr = krkStr.split(' ');
-    let arr = krkArr.map(s => new Position(s.charAt(0), s.charAt(1)));
+    let arr = krkArr.map(s => positionFromString(s));
     STATE.addPiece(new King(0, arr[0])); // White King
     STATE.addPiece(new Rook(0, arr[1])); // White Rook
     STATE.addPiece(new King(1, arr[2])); // Black King
@@ -71,31 +74,30 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     await StockfishWrapper.newGame();
 
     let now = Date.now();
-    let ENGINE = new Engine(depth);
+    let ENGINE = new Engine(depth, true);
     let result = ENGINE.minimax(STATE);
     now = Date.now()-now;
     let originalResult = result;
     let moves = [];
-    if (result.depth === solutionDepth) {
-        while (result && result.move) {
-            // make white move
-            moves.push(result.move);
-            STATE.makeMove(STATE.moveFromString(result.move));
-            STATE.nextPlayer();
+    while (result && result.move) {
+        // make white move
+        moves.push(result.move);
+        STATE.makeMove(STATE.moveFromString(result.move));
+        STATE.nextPlayer();
 
-            if (STATE.evaluate() !== undefined) break;
+        if (STATE.evaluate() !== undefined) break;
 
-            result = ENGINE.positionMinimax.get(STATE.toString());
+        result = ENGINE.positionMinimax.get(STATE.toString());
 
-            // make black move
-            let moveStr = await StockfishWrapper.getBestMoveForFEN(STATE.toFEN());
-            moves.push(moveStr);
-            //console.log(`Last move = ${moveStr} we thought it would be ${result.move}`);
-            STATE.makeMove(STATE.moveFromString(moveStr));
-            STATE.nextPlayer();
+        // make black move
+        //console.log(`FEN=${STATE.toFEN()}`);
+        let moveStr = await StockfishWrapper.getBestMoveForFEN(STATE.toFEN());
+        moves.push(moveStr);
+        //console.log(`Last move = ${moveStr} we thought it would be ${result.move}`);
+        STATE.makeMove(STATE.moveFromString(moveStr));
+        STATE.nextPlayer();
 
-            result = ENGINE.positionMinimax.get(STATE.toString());
-        }
+        result = ENGINE.positionMinimax.get(STATE.toString());
     }
     let details = `${moves}`;
     if (STATE.evaluate() !== 1 || moves.length !== solutionDepth) {
@@ -122,5 +124,6 @@ if (typeof INIT_ENGINE === 'function') {
             await testPosition(8, 'c2 b3 e1', 13, depth);
             console.log();
         }
+        StockfishWrapper.terminate();
     })();
 }
