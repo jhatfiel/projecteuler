@@ -1,79 +1,66 @@
-//import { Engine, King, Position, Rook, State } from "./achess.js";
-//import jsChessEngine from 'js-chess-engine';
-//import { fileURLToPath } from "url";
-//import INIT_ENGINE from './stockfish.js';
-//import { createRequire } from 'module';
-//const require = createRequire(import.meta.url);
-require("esm-hook");
-
-const {Engine, King, Rook, State, Position, moveToString} = require('../../dist/out-tsc/chess/achess.js');
-var INIT_ENGINE = require("./stockfish.js");
+require('esm-hook');
+const { Engine, King, Rook, State, Position } = require('../../dist/out-tsc/chess/achess.js');
+var INIT_ENGINE = require('./stockfish.js');
 
 var engine;
 engine = {
-    locateFile: function (path)
-    {
+    locateFile: function (path) {
         if (path.indexOf('.wasm') > -1) return require('path').join(__dirname, 'stockfish.wasm');
         else return __filename;
     },
 };
 
-function getMove(fen) {
+if (typeof INIT_ENGINE === 'function') {
+    var Stockfish = INIT_ENGINE();
+}
+
+function sendMessageToEngine(str) {
+    //console.log(`sendMessageToEngine.Sending: ${str}`);
+    engine.postMessage(str);
+}
+
+var engineReady; // resolve function to complete callbacks from stockfish
+
+async function getMove(fen) {
     //console.error(`Calling getMove with ${fen}`);
     return new Promise((resolve, reject) => {
-        var Stockfish = INIT_ENGINE();
-        Stockfish(engine).then(function ()
-        {
-            var loadedNets;
-            var gotUCI;
-            var startedThinking;
-            //var position = `fen 6k1/8/5K2/8/8/8/3R4/8 w`;
-            var position = `fen ${fen}`;
-            
-            function send(str) {
-                //console.log("Sending: " + str)
-                engine.postMessage(str);
-            }
+        engineReady = resolve;
+        sendMessageToEngine(`position fen ${fen}`);
+        sendMessageToEngine('eval');
+        sendMessageToEngine('go mate');
+    });
+}
 
-            let onLog = (line) => {
-                var match;
-                if (typeof line !== "string") {
-                    //console.log(`NOT string, ${typeof line}`);
-                    //console.log(line);
-                    return;
-                }
-                
-                //console.log("Line: " + line)
-                
-                if (!loadedNets && line.indexOf("Stockfish 16") > -1) {
-                    loadedNets = true;
-                    send("uci");
-                } else if (!gotUCI && line === "uciok") {
-                    gotUCI = true;
-                    send("position " + position);
-                    //send("eval");
-                    //send("d");
-                    send("go mate");
-                } else if (line.indexOf("bestmove") > -1) {
-                    match = line.match(/bestmove\s+(\S+)/);
-                    if (match) {
-                        //console.log("Best move: " + match[1]);
-                        //engine.terminate();
-                        //send('stop');
-                        loadedNets = undefined;
-                        gotUCI = undefined;
-                        startedThinking = undefined;
-                        //setTimeout(_ => resolve(match[1]), 1000);
-                        //engine.removeMessageListener(onLog);
-                        resolve(match[1]);
-                    }
-                }
-            };
+var loadedNets;
+var gotUCI;
+function stockfishListener(line) {
+    var match;
+    if (typeof line !== 'string') {
+        //console.log(`NOT string, ${typeof line}`);
+        //console.log(line);
+        return;
+    }
+    
+    //console.log(`Line: ${line}`);
+    
+    if (!loadedNets && line.indexOf('Load eval file success: 1') > -1) {
+        loadedNets = true;
+        sendMessageToEngine('uci');
+    } else if (!gotUCI && line === 'uciok') {
+        gotUCI = true;
+        engineReady();
+    } else if (line.indexOf('bestmove') > -1) {
+        match = line.match(/bestmove\s+(\S+)/);
+        if (match) engineReady(match[1]);
+    }
+}
 
-            engine.addMessageListener(onLog);
-            process.setMaxListeners(0);
-            
-            send("setoption name Use NNUE value true");
+async function initEngine() {
+    return new Promise((resolve, reject) => {
+        engineReady = resolve;
+        Stockfish(engine).then(function () {
+            engine.addMessageListener(stockfishListener);
+            sendMessageToEngine('setoption name Use NNUE value true');
         });
     });
 }
@@ -95,13 +82,10 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     let moves = [];
     if (result.depth === solutionDepth) {
         while (result && result.move) {
-            //console.log(`FEN: ${STATE.toFEN()}, move=${result.move}`);
             // make white move
             moves.push(result.move);
             STATE.makeMove(STATE.moveFromString(result.move));
             STATE.nextPlayer();
-
-            //game.move(result.move.substring(0, 2), result.move.substring(2));
 
             if (STATE.evaluate() !== undefined) break;
 
@@ -109,17 +93,6 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
 
             // make black move
             let moveStr = await getMove(STATE.toFEN());
-            //if (false && solutionDepth - moves.length < 20) {
-                // ai can handle this
-                //game.aiMove(4);
-                //game.printToConsole();
-                //let lastMove = game.getHistory(true)[0];
-                //moveStr = `${lastMove.from}${lastMove.to}`.toLowerCase();
-            //} else {
-                // need to use the ENGINE to get us going here
-                //moveStr = result.move;
-                ////game.move(moveStr.substring(0, 2), moveStr.substring(2));
-            //}
             moves.push(moveStr);
             //console.log(`Last move = ${moveStr} we thought it would be ${result.move}`);
             STATE.makeMove(STATE.moveFromString(moveStr));
@@ -135,8 +108,11 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     console.log(`${caseNum}. [${solutionDepth.toString().padStart(2)}] ${now} / ${ENGINE.positionMinimax.size} ${details}`);
 }
 
-if (typeof INIT_ENGINE === "function") {
+if (typeof INIT_ENGINE === 'function') {
     (async () => {
+        process.stdout.write(`Initializing stockfish engine...`);
+        await initEngine();
+        console.log(`DONE!`);
         for (let depth of [1, 3, 5, 7, 9, 11, 13, 15]) {
             console.log(`Depth: ${depth}`);
 
