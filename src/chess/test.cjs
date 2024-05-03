@@ -103,7 +103,7 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     if (STATE.evaluate() !== 1 || moves.length !== solutionDepth) {
         details = `FAILED ${originalResult.evaluation} / ${originalResult.depth} / ${moves} ${STATE.evaluate()}`;
     }
-    console.log(`${caseNum}. [${solutionDepth.toString().padStart(2)}] ${now} / ${ENGINE.positionMinimax.size} ${details}`);
+    console.log(`${caseNum}. [${solutionDepth.toString().padStart(2)}] ${now} / ${ENGINE.positionMinimax.size} / ${ENGINE.deepenCount} ${details}`);
 }
 
 if (typeof INIT_ENGINE === 'function') {

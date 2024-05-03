@@ -25,7 +25,7 @@ console.error(STATE.debugString().join('\n'));
 //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
 
 let now = Date.now();
-let ENGINE = new Engine(5);
+let ENGINE = new Engine(13);
 console.error(`Starting engine ${ENGINE.maxDepth}`);
 
 console.error(`*/obj=`);
@@ -222,6 +222,7 @@ export class State {
             followingStates: Map<string, State>
             evaluation: number;
             wk: Piece;
+            wr: Piece;
             bk: Piece;
         }
 
@@ -230,6 +231,7 @@ export class State {
             followingStates: v[1].getNextStates(),
             evaluation: v[1].evaluate(),
             wk: v[1].pieces.find(p => p instanceof King && p.player === 0),
+            wr: v[1].pieces.find(p => p instanceof Rook && p.player === 0),
             bk: v[1].pieces.find(p => p instanceof King && p.player === 1)
         }] as [string, sortingArrayType]);
 
@@ -241,8 +243,10 @@ export class State {
             let ans = aObj.followingStates;
             let bns = bObj.followingStates;
             let awk = aObj.wk;
+            let awr = aObj.wr;
             let abk = aObj.bk;
             let bwk = bObj.wk;
+            let bwr = bObj.wr;
             let bbk = bObj.bk;
 
             // undefined just means we don't know who wins this position
@@ -254,10 +258,7 @@ export class State {
                 let bAverageKingDFC = [...bns.values()]
                                         .map(ns => distanceFromCenter(ns.pieces.find(p => p instanceof King && p.player === 1).position))
                                         .reduce((acc, d) => acc += d, 0) / bns.size;
-                if (aAverageKingDFC !== bAverageKingDFC) { 
-                    //console.error(`Found difference in king DFC: ${bAverageKingDFC} vs ${aAverageKingDFC}`); 
-                    return bAverageKingDFC - aAverageKingDFC;
-                }
+                if (aAverageKingDFC !== bAverageKingDFC) return bAverageKingDFC - aAverageKingDFC;
                 
                 // available moves?
                 if (ans.size !== bns.size) return ans.size - bns.size;
@@ -268,15 +269,13 @@ export class State {
                 if (ad !== bd) return ad - bd;
 
                 // add in distance between rook and king file/rank - we want to minimize that as well right?
-                /*
-                let awr = a.pieces.find(p => p instanceof Rook && p.player === 0);
-                let bwr = b.pieces.find(p => p instanceof Rook && p.player === 0);
-                ad = awr.position.distanceTo(abk.position);
-                bd = bwr.position.distanceTo(bbk.position);
-                if (ad !== bd) return ad - bd;
-                */
 
-                return -1;
+                let aFRDelta = Math.min(Math.abs(awr.position%8 - abk.position%8), Math.abs(Math.floor(awr.position/8) - Math.floor(abk.position/8)));
+                let bFRDelta = Math.min(Math.abs(bwr.position%8 - bbk.position%8), Math.abs(Math.floor(bwr.position/8) - Math.floor(bbk.position/8)));
+
+                if (aFRDelta !== bFRDelta) return aFRDelta - bFRDelta;
+
+                return a.toString().localeCompare(b.toString());
             }
 
             if (ae === undefined) return 1//(be <= 0)?1:-1;
@@ -428,6 +427,7 @@ export type MinimaxResult = {
 export class Engine {
     positionMinimax = new Map<string, MinimaxResult>();
     computing = new Set<string>();
+    deepenCount = 0;
 
     constructor(public maxDepth: number, public disableDebugging=false) {}
 
@@ -452,7 +452,7 @@ export class Engine {
         //  undefined         false          false         true         true (we always pick unknown if the alternative is draw or losing)
         //  0                 false          false        further       true (draw games, better than losing! or at least further away)
         //  -1                false          false         false       further (losing sucks, so it's always worse, unless it's further away)
-        if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth < b.depth; // winning and closer or b is not winning
+        if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth <= b.depth; // winning and closer or b is not winning
         // see, this is tough - a=undefined means we won't lose or draw after depth moves we know.  But if we draw at move 5 and lose at move 6, was it better that we picked a?
         // i.e., is undefined/6 better than 0/5?
         // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
@@ -471,8 +471,8 @@ export class Engine {
             throw new Error(`Way too deep! ${currentDepth}/${alpha?.depth}/${beta?.depth}`);
         }
 
-        let debug = true; //currentDepth<=2;
-        let recordMoves = true || debug;
+        let debug = false; //currentDepth<=2;
+        let recordMoves = false || debug;
         if (this.disableDebugging) {
             debug = false;
             recordMoves = false;
@@ -504,6 +504,7 @@ export class Engine {
                     let line = '';
                     if (debug) line = `${buffer}  ${nextMove}:`;
                     if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
+                        if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
                         if (debug) console.error(line);
                         nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max?.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                         nsr.depth++;
@@ -518,11 +519,13 @@ export class Engine {
                             else if (max.evaluation === 1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${max.depth}",`;
                             else if (nsr.depth+1 >= max.depth) line += ` status: "deeperThanMax",`;
                         }
+                        nsr = {...nsr};
                         if (nsr.depth+1 > remainingDepth) {
                             if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                            continue;
+                            nsr.depth = remainingDepth-1;
+                            nsr.evaluation = undefined;
+                            //continue;
                         }
-                        nsr = {...nsr};
                         nsr.depth++;
                         nsr.move = nextMove;
                         if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
@@ -550,6 +553,7 @@ export class Engine {
                     let line = '';
                     if (debug) line = `${buffer}  ${nextMove}:`;
                     if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
+                        if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
                         if (debug) console.error(line);
                         nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min?.evaluation===-1?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                         nsr.depth++;
@@ -564,11 +568,13 @@ export class Engine {
                             else if (min.evaluation === -1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${min.depth}",`;
                             else if (nsr.depth+1 >= min.depth) line += ` status: "deeperThanMin",`;
                         }
+                        nsr = {...nsr};
                         if (nsr.depth+1 > remainingDepth) {
                             if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                            continue;
+                            nsr.depth = remainingDepth-1;
+                            nsr.evaluation = undefined;
+                            //continue;
                         }
-                        nsr = {...nsr};
                         nsr.depth++;
                         nsr.move = nextMove;
                         if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];

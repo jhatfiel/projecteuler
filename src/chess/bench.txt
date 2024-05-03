@@ -682,3 +682,6 @@
 [ip-172-31-43-116.eu-] / 2024-05-03T13:35:17.955Z: [    534.95ms] Ran achess resulting in  [./data/chess/sample2.txt]
 [ip-172-31-43-116.eu-] / 2024-05-03T13:36:42.545Z: [    625.14ms] Ran achess resulting in  [./data/chess/sample2.txt]
 [ip-172-31-43-116.eu-] / 2024-05-03T13:37:08.169Z: [    835.75ms] Ran achess resulting in  [./data/chess/sample2.txt]
+[ip-172-31-43-116.eu-] / 2024-05-03T14:27:45.854Z: [   2387.21ms] Ran achess resulting in  [./data/chess/sample2.txt]
+[ip-172-31-43-116.eu-] / 2024-05-03T14:28:14.473Z: [    649.49ms] Ran achess resulting in  [./data/chess/sample2.txt]
+[ip-172-31-43-116.eu-] / 2024-05-03T14:46:34.821Z: [   1614.41ms] Ran achess resulting in  [./data/chess/input4.txt]
