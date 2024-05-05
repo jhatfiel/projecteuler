@@ -452,7 +452,7 @@ export class Engine {
         //  undefined         false          false         true         true (we always pick unknown if the alternative is draw or losing)
         //  0                 false          false        further       true (draw games, better than losing! or at least further away)
         //  -1                false          false         false       further (losing sucks, so it's always worse, unless it's further away)
-        if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth <= b.depth; // winning and closer or b is not winning
+        if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth < b.depth; // winning and closer or b is not winning
         // see, this is tough - a=undefined means we won't lose or draw after depth moves we know.  But if we draw at move 5 and lose at move 6, was it better that we picked a?
         // i.e., is undefined/6 better than 0/5?
         // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
@@ -524,7 +524,6 @@ export class Engine {
                             if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
                             nsr.depth = remainingDepth-1;
                             nsr.evaluation = undefined;
-                            //continue;
                         }
                         nsr.depth++;
                         nsr.move = nextMove;
@@ -573,7 +572,6 @@ export class Engine {
                             if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
                             nsr.depth = remainingDepth-1;
                             nsr.evaluation = undefined;
-                            //continue;
                         }
                         nsr.depth++;
                         nsr.move = nextMove;
