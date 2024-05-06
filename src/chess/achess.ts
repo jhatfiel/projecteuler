@@ -110,11 +110,11 @@ export function positionFromString(s: string): number {
 };
 
 function distanceBetween(a: number, b: number): number {
-    return Math.abs(Math.floor(a/8)-Math.floor(b/8)) + Math.abs(a%8-b%8);
+    return Math.abs((a>>3)-(b>>3)) + Math.abs(a%8-b%8);
 }
-function positionToString(pos: number) { return String.fromCharCode('a'.charCodeAt(0)+Math.floor(pos/8))+String.fromCharCode('1'.charCodeAt(0)+pos%8); }
+function positionToString(pos: number) { return String.fromCharCode('a'.charCodeAt(0)+(pos>>3))+String.fromCharCode('1'.charCodeAt(0)+pos%8); }
 function distanceFromCenter(pos: number): number {
-    return Math.max(3-Math.min(pos%8, 7-pos%8), 3-Math.min(Math.floor(pos/8), 7-Math.floor(pos/8)));
+    return Math.max(3-Math.min(pos%8, 7-(pos>>3)), 3-Math.min((pos>>3), 7-(pos>>3)));
 }
 
 export abstract class Piece {
@@ -270,8 +270,8 @@ export class State {
 
                 // add in distance between rook and king file/rank - we want to minimize that as well right?
 
-                let aFRDelta = Math.min(Math.abs(awr.position%8 - abk.position%8), Math.abs(Math.floor(awr.position/8) - Math.floor(abk.position/8)));
-                let bFRDelta = Math.min(Math.abs(bwr.position%8 - bbk.position%8), Math.abs(Math.floor(bwr.position/8) - Math.floor(bbk.position/8)));
+                let aFRDelta = Math.min(Math.abs(awr.position%8 - abk.position%8), Math.abs((awr.position>>3) - (abk.position>>3)));
+                let bFRDelta = Math.min(Math.abs(bwr.position%8 - bbk.position%8), Math.abs((bwr.position>>3) - (bbk.position>>3)));
 
                 if (aFRDelta !== bFRDelta) return aFRDelta - bFRDelta;
 
@@ -382,7 +382,7 @@ export class State {
         for (let rankNum=7; rankNum>=0; rankNum--) {
             //let rankPieces = this.pieces.filter(p => p.position.rankNum === rankNum).sort((a,b) => a.position.file.localeCompare(b.position.file));
             let line = Array.from({length: 8});
-            this.pieces.filter(p => p.position%8 === rankNum).forEach(p => line[Math.floor(p.position/8)] = p.getPieceLetter());
+            this.pieces.filter(p => p.position%8 === rankNum).forEach(p => line[(p.position>>3)] = p.getPieceLetter());
             let num = 0;
             line.forEach(piece => {
                 if (piece) {
@@ -609,11 +609,11 @@ export class Rook extends Piece {
     value = 5;
     validMoves(state: State) { 
         let positions: number[] = [];
-        let fileNum = Math.floor(this.position/8);
+        let fileNum = (this.position>>3);
         [1, -1, 8, -8].forEach(delta => {
             let p = this.position + delta;
             let skipFileCheck = Math.abs(delta) > 1;
-            while (p >= 0 && p <= 63 && (skipFileCheck || Math.floor(p/8) === fileNum)) {
+            while (p >= 0 && p <= 63 && (skipFileCheck || (p>>3) === fileNum)) {
                 let pieceThere = state.getPieceAtPosition(p);
                 if (!pieceThere || pieceThere.player !== this.player) positions.push(p);
                 if (pieceThere) break;
