@@ -14,8 +14,8 @@ console.error('/*');
 let STATE = new State();
 let positions: string[][] = [];
 
-let arr = this.readline().split(' ').map(s => positionFromString(s));
-console.error(`Initial State: ${arr.map(pos => positionToString(pos))}`);
+let arr = this.readline().split(' ').map(s => Position.fromString(s));
+console.error(`Initial State: ${arr.map(pos => pos.toString())}`);
 STATE.addPiece(new King(0, arr[0])); // White King
 STATE.addPiece(new Rook(0, arr[1])); // White Rook
 STATE.addPiece(new King(1, arr[2])); // Black King
@@ -105,32 +105,40 @@ if (!STATE.isCheck()) {
     }
 }
 
-export function positionFromString(s: string): number {
-    return 8*(s.charCodeAt(0) - 'a'.charCodeAt(0)) + s.charCodeAt(1) - '1'.charCodeAt(0);
-};
+export class Position {
+    constructor(public pos: number) {}
+    static fromString(s: string): Position {
+        return new Position(((s.charCodeAt(0) - 'a'.charCodeAt(0))<<3) + (s.charCodeAt(1) - '1'.charCodeAt(0)));
+    }
+    getRank(): number { return this.pos%8; }
+    getRankStr(): string { return String.fromCharCode('1'.charCodeAt(0) + this.getRank()); }
+    getFile(): number { return this.pos>>3; }
+    getFileStr(): string { return String.fromCharCode('a'.charCodeAt(0) + this.getFile()); }
 
-function distanceBetween(a: number, b: number): number {
-    return Math.abs((a>>3)-(b>>3)) + Math.abs(a%8-b%8);
-}
-function positionToString(pos: number) { return String.fromCharCode('a'.charCodeAt(0)+(pos>>3))+String.fromCharCode('1'.charCodeAt(0)+pos%8); }
-function distanceFromCenter(pos: number): number {
-    return Math.max(3-Math.min(pos%8, 7-(pos>>3)), 3-Math.min((pos>>3), 7-(pos>>3)));
+    distanceBetween(b: Position): number {
+        return Math.abs(this.getRank() - b.getRank()) + Math.abs(this.getFile() - b.getFile());
+    }
+    distanceFromCenter(): number {
+        return Math.max(3-Math.min(this.getFile(), 7-this.getFile()), 3-Math.min(this.getRank(), 7-this.getRank()));
+    }
+    equals(b: Position): boolean { return this.pos === b.pos; }
+    toString(): string { return `${this.getFileStr()}${this.getRankStr()}`; }
 }
 
 export abstract class Piece {
     abstract letter: string;
     abstract value: number;
-    constructor(public player: number, public position: number) {} // player=0 is white, 1 is black
-    abstract validMoves(state: State): number[];
+    constructor(public player: number, public position: Position) {} // player=0 is white, 1 is black
+    abstract validMoves(state: State): Position[];
     clone(): Piece {
        return new (<any>this.constructor)(this.player, this.position);
     }
-    toString() { return `${positionToString(this.position)}=${this.player==0?'W':'B'}${this.letter}`; }
+    toString() { return `${this.position.toString()}=${this.player==0?'W':'B'}${this.letter}`; }
     getPieceLetter() { return this.player===0?this.letter:this.letter.toLowerCase()};
 }
 
-export type Move = { piece: Piece, position: number };
-export function moveToString(move: Move) { return `${positionToString(move.piece.position)}${positionToString(move.position)}`; }
+export type Move = { piece: Piece, position: Position };
+export function moveToString(move: Move) { return `${move.piece.position.toString()}${move.position.toString()}`; }
 
 export class State {
     activePlayer = 0;
@@ -140,8 +148,8 @@ export class State {
     evaluation: number;
 
     moveFromString(str: string): Move {
-        let pos = positionFromString(str.substring(0, 2));
-        let position = positionFromString(str.substring(2));
+        let pos = Position.fromString(str.substring(0, 2));
+        let position = Position.fromString(str.substring(2));
         let piece = this.getPieceAtPosition(pos);
         let pieceThere = this.getPieceAtPosition(position);
         if (piece.player !== this.activePlayer) throw new Error(`Tried to move ${piece} but turn is ${this.activePlayer}`);
@@ -153,12 +161,12 @@ export class State {
         // e2h2 should look like Rh2
         // if there was a piece there, it would be Rxh2 
         // TODO: implementing proper capture notation
-        return move.piece.letter + positionToString(move.position);
+        return move.piece.letter + move.position.toString();
     }
 
     addPiece(p: Piece) { this.pieces.push(p); }
-    removePiece(pos: number) { this.pieces = this.pieces.filter(p => p.position !== pos); }
-    getPieceAtPosition(pos: number): Piece {  return this.pieces.find(p => p.position === pos); }
+    removePiece(pos: Position) { this.pieces = this.pieces.filter(p => !p.position.equals(pos)); }
+    getPieceAtPosition(pos: Position): Piece {  return this.pieces.find(p => p.position.equals(pos)); }
 
     makeMove(move: Move) {
         this.removePiece(move.position);
@@ -179,7 +187,7 @@ export class State {
             console.error(this.debugString().join('\n'));
             throw new Error(`activePlayerKing has gone missing...`);
         }
-        if (this.pieces.some(p => p.player !== this.activePlayer && p.validMoves(this).some(pos => pos === activePlayerKing.position))) return true;
+        if (this.pieces.some(p => p.player !== this.activePlayer && p.validMoves(this).some(pos => pos.equals(activePlayerKing.position)))) return true;
         return false;
     }
 
@@ -253,10 +261,10 @@ export class State {
             if (ae === undefined && be === undefined) {
                 // choose the move that pushes the black king further into the corners/sides
                 let aAverageKingDFC = [...ans.values()]
-                                        .map(ns => distanceFromCenter(ns.pieces.find(p => p instanceof King && p.player === 1).position))
+                                        .map(ns => ns.pieces.find(p => p instanceof King && p.player === 1).position.distanceFromCenter())
                                         .reduce((acc, d) => acc += d, 0) / ans.size;
                 let bAverageKingDFC = [...bns.values()]
-                                        .map(ns => distanceFromCenter(ns.pieces.find(p => p instanceof King && p.player === 1).position))
+                                        .map(ns => ns.pieces.find(p => p instanceof King && p.player === 1).position.distanceFromCenter())
                                         .reduce((acc, d) => acc += d, 0) / bns.size;
                 if (aAverageKingDFC !== bAverageKingDFC) return bAverageKingDFC - aAverageKingDFC;
                 
@@ -264,14 +272,14 @@ export class State {
                 if (ans.size !== bns.size) return ans.size - bns.size;
 
                 // distance between kings?
-                let ad = distanceBetween(awk.position, abk.position);
-                let bd = distanceBetween(bwk.position, bbk.position);
+                let ad = awk.position.distanceBetween(abk.position);
+                let bd = bwk.position.distanceBetween(bbk.position);
                 if (ad !== bd) return ad - bd;
 
                 // add in distance between rook and king file/rank - we want to minimize that as well right?
 
-                let aFRDelta = Math.min(Math.abs(awr.position%8 - abk.position%8), Math.abs((awr.position>>3) - (abk.position>>3)));
-                let bFRDelta = Math.min(Math.abs(bwr.position%8 - bbk.position%8), Math.abs((bwr.position>>3) - (bbk.position>>3)));
+                let aFRDelta = Math.min(Math.abs(awr.position.getFile() - abk.position.getFile()), Math.abs(awr.position.getRank() - abk.position.getRank()));
+                let bFRDelta = Math.min(Math.abs(bwr.position.getFile() - bbk.position.getFile()), Math.abs(bwr.position.getRank() - bbk.position.getRank()));
 
                 if (aFRDelta !== bFRDelta) return aFRDelta - bFRDelta;
 
@@ -316,8 +324,8 @@ export class State {
                 // 01234567
                 // 01233210
                 // 32100123
-                let adfc = distanceFromCenter(abk.position);
-                let bdfc = distanceFromCenter(bbk.position);
+                let adfc = abk.position.distanceFromCenter();
+                let bdfc = bbk.position.distanceFromCenter();
                 return adfc - bdfc;
             }
             if (ae === undefined) return -1;
@@ -374,7 +382,7 @@ export class State {
             [this.pieces.find(p => p instanceof King && p.player===0),
              this.pieces.find(p => p instanceof Rook),
              this.pieces.find(p => p instanceof King && p.player===1)
-            ].map(p => p?positionToString(p.position):'  ').join('')}`;
+            ].map(p => p?p.position.toString():'  ').join('')}`;
     }
 
     toFEN(): string {
@@ -382,7 +390,7 @@ export class State {
         for (let rankNum=7; rankNum>=0; rankNum--) {
             //let rankPieces = this.pieces.filter(p => p.position.rankNum === rankNum).sort((a,b) => a.position.file.localeCompare(b.position.file));
             let line = Array.from({length: 8});
-            this.pieces.filter(p => p.position%8 === rankNum).forEach(p => line[(p.position>>3)] = p.getPieceLetter());
+            this.pieces.filter(p => p.position.getRank() === rankNum).forEach(p => line[p.position.getFile()] = p.getPieceLetter());
             let num = 0;
             line.forEach(piece => {
                 if (piece) {
@@ -408,7 +416,7 @@ export class State {
         for (let rankNum=7; rankNum>=0; rankNum--) {
             let line = (rankNum+1).toString();
             for (let fileNum=0; fileNum<8; fileNum++) {
-                line += this.getPieceAtPosition(rankNum+fileNum*8)?.getPieceLetter() ?? '.';
+                line += this.getPieceAtPosition(new Position(rankNum+fileNum*8))?.getPieceLetter() ?? '.';
             }
             lines.push(line);
         }
@@ -606,14 +614,15 @@ export class Rook extends Piece {
     letter = 'R';
     value = 5;
     validMoves(state: State) { 
-        let positions: number[] = [];
-        let fileNum = (this.position>>3);
+        let positions: Position[] = [];
+        let fileNum = this.position.getFile();
         [1, -1, 8, -8].forEach(delta => {
-            let p = this.position + delta;
+            let p = this.position.pos + delta;
             let skipFileCheck = Math.abs(delta) > 1;
             while (p >= 0 && p <= 63 && (skipFileCheck || (p>>3) === fileNum)) {
-                let pieceThere = state.getPieceAtPosition(p);
-                if (!pieceThere || pieceThere.player !== this.player) positions.push(p);
+                let newPosition = new Position(p);
+                let pieceThere = state.getPieceAtPosition(newPosition);
+                if (!pieceThere || pieceThere.player !== this.player) positions.push(newPosition);
                 if (pieceThere) break;
                 p += delta;
             }
@@ -628,11 +637,12 @@ export class King extends Piece {
     validMoves(state: State) {
         //console.error(`Asking ${this} for valid moves based on ${state}`);
         return [-9, -8, -7, -1, 1, 7, 8, 9]
-        .filter(delta => !(this.position%8 === 0 && (delta===-9||delta===-1||delta===7)) && !(this.position%8 === 7 && (delta===-7||delta===1||delta===9)))
-        .map(delta => this.position + delta)
+        .filter(delta => !(this.position.getRank() === 0 && (delta===-9||delta===-1||delta===7)) && !(this.position.getRank() === 7 && (delta===-7||delta===1||delta===9)))
+        .map(delta => this.position.pos + delta)
         .filter(pos => pos >= 0 && pos <= 63)
-        .filter(pos => {
-            let pieceThere = state.getPieceAtPosition(pos);
+        .map(pos => new Position(pos))
+        .filter(newPosition => {
+            let pieceThere = state.getPieceAtPosition(newPosition);
             return (!pieceThere || pieceThere.player !== this.player);
         });
     }

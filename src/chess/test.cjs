@@ -1,5 +1,5 @@
 require('esm-hook');
-const { Engine, King, Rook, State, positionFromString } = require('../../dist/out-tsc/chess/achess.js');
+const { Engine, King, Rook, State, Position } = require('../../dist/out-tsc/chess/achess.js');
 var INIT_ENGINE = require('../../node_modules/stockfish/src/stockfish-nnue-16.js');
 
 class StockfishWrapper {
@@ -66,7 +66,7 @@ async function testPosition(caseNum, krkStr, solutionDepth, depth = 13) {
     if (depth < solutionDepth) return;
     let STATE = new State();
     let krkArr = krkStr.split(' ');
-    let arr = krkArr.map(s => positionFromString(s));
+    let arr = krkArr.map(s => Position.fromString(s));
     STATE.addPiece(new King(0, arr[0])); // White King
     STATE.addPiece(new Rook(0, arr[1])); // White Rook
     STATE.addPiece(new King(1, arr[2])); // Black King
