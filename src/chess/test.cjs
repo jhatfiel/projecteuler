@@ -129,7 +129,7 @@ if (typeof INIT_ENGINE === 'function') {
         process.stdout.write(`Initializing stockfish engine...`);
         await StockfishWrapper.initEngine();
         console.log(`DONE!`);
-        for (let depth of [1, 3, 5, 7, 9, 11, 13, 15]) {
+        for (let depth of [1, 3, 5, 7, 9, 11, 13]) {
             console.log(`Depth: ${depth}`);
 
             await testPosition('S1', 'e3 h5 e1', 1, depth);

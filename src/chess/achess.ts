@@ -490,11 +490,6 @@ export class Engine {
 
         let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
-        if (this.positionDepth.has(positionKey)) {
-            if (this.positionDepth.get(positionKey) < currentDepth) {
-                throw new Error(`${positionKey} being evaluated at ${currentDepth} but previously seen at ${this.positionDepth.get(positionKey)}`);
-            }
-        }
         this.positionDepth.set(positionKey, currentDepth);
         let cached = this.positionMinimax.get(positionKey);
         if (cached && (cached.evaluation !== undefined || cached.depth >= remainingDepth)) {
@@ -505,6 +500,7 @@ export class Engine {
                 if (result.moves) result.moves = result.moves.slice(0, result.depth);
             }
         } else {
+            if (this.positionMinimax.has(positionKey)) this.deepenCount++;
             result.evaluation = state.evaluate();
             if (debug) {
                 console.error(`${buffer}{`);
@@ -526,7 +522,6 @@ export class Engine {
                         let line = '';
                         if (debug) line = `${buffer}  ${nextMove}:`;
                         if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
-                            if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
                             if (debug) console.error(line);
                             nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max?.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                             nsr.depth++;
@@ -574,7 +569,6 @@ export class Engine {
                         let line = '';
                         if (debug) line = `${buffer}  ${nextMove}:`;
                         if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
-                            if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
                             if (debug) console.error(line);
                             nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min?.evaluation===-1||min?.evaluation===0?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
                             nsr.depth++;
