@@ -1,0 +1,68 @@
+Initializing stockfish engine...DONE!
+Depth: 1
+S1. [ 1] 25 / 2 / 0 / Predicted(1): h5h1
+
+Depth: 3
+S1. [ 1] 8 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 171 / 335 / 90 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 25 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+
+Depth: 5
+S1. [ 1] 3 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 74 / 539 / 156 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 10 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 181 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+I3. [ 5] 230 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+
+Depth: 7
+S1. [ 1] 0 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 47 / 747 / 324 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 6 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 148 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+I3. [ 5] 115 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+
+Depth: 9
+S1. [ 1] 0 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 56 / 747 / 324 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 12 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 154 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+S5. [ 9] 4977 / 23213 / 83953 / Predicted(9): f5a5,g6g7,a5a6,g7g8,e7f6,g8h7,f6f7,h7h8,a6h6 Actual(9): f5a5,g6g7,a5a6,g7h8,e7f8,h8h7,f8f7,h7h8,a6h6
+I3. [ 5] 166 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+I4. [ 9] 4584 / 21183 / 79793 / Predicted(9): c5d5,b6b7,d5d6,b7a8,d7c8,a8a7,c8c7,a7a8,d6a6 Actual(9): c5d5,b6b7,d5d6,b7b8,d7c6,b8a7,c6c7,a7a8,d6a6
+
+Depth: 11
+S1. [ 1] 0 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 91 / 747 / 324 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 6 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 136 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+S5. [ 9] 7626 / 33282 / 132824 / Predicted(9): f5a5,g6g7,a5a6,g7g8,e7f6,g8h7,f6f7,h7h8,a6h6 Actual(9): f5a5,g6g7,a5a6,g7h8,e7f8,h8h7,f8f7,h7h8,a6h6
+S6. [11] 6499 / 23363 / 127870 / Predicted(11): b3b1,a5a6,a3a4,a6a7,a4a5,a7a8,a5b6,a8b8,b1c1,b8a8,c1c8
+I3. [ 5] 166 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+I4. [ 9] 8244 / 33860 / 150504 / Predicted(9): c5d5,b6b7,d5d6,b7a8,d7c8,a8a7,c8c7,a7a8,d6a6 Actual(9): c5d5,b6b7,d5d6,b7b8,d7c6,b8a7,c6c7,a7a8,d6a6
+I5. [11] 7531 / 23945 / 133031 / Predicted(11): c2a2,e1f1,c1d1,f1g1,d1e1,g1h1,e1f2,h1h2,a2a3,h2h1,a3h3
+
+Depth: 13
+S1. [ 1] 0 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 58 / 747 / 324 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 8 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 139 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+S5. [ 9] 7294 / 33349 / 133667 / Predicted(9): f5a5,g6g7,a5a6,g7g8,e7f6,g8h7,f6f7,h7h8,a6h6 Actual(9): f5a5,g6g7,a5a6,g7h8,e7f8,h8h7,f8f7,h7h8,a6h6
+S6. [11] 6849 / 23658 / 129327 / Predicted(11): b3b1,a5a6,a3a4,a6a7,a4a5,a7a8,a5b6,a8b8,b1c1,b8a8,c1c8
+S7. [13] 28774 / 76455 / 494724 / Predicted(13): c7d6,e8f7,d6d7,f7f8,d7e6,f8g7,e6e7,g7g8,e7f6,g8h7,f6f7,h7h8,b6h6 Actual(13): c7d6,e8f7,d6d7,f7g8,d7e6,g8g7,e6e7,g7h8,e7f8,h8h7,f8f7,h7h8,b6h6
+S8. [13] 26179 / 65625 / 449044 / Predicted(13): c2d3,e1f2,d3d2,f2f1,d2e3,f1g2,e3e2,g2g1,e2f3,g1h1,f3g3,h1g1,b3b1 Actual(13): c2d3,e1f2,d3d2,f2f1,d2e3,f1g2,e3e2,g2g1,e2f3,g1h2,f3f2,h2h1,b3h3
+I3. [ 5] 148 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+I4. [ 9] 9016 / 33860 / 150504 / Predicted(9): c5d5,b6b7,d5d6,b7a8,d7c8,a8a7,c8c7,a7a8,d6a6 Actual(9): c5d5,b6b7,d5d6,b7b8,d7c6,b8a7,c6c7,a7a8,d6a6
+I5. [11] 7863 / 24240 / 134488 / Predicted(11): c2a2,e1f1,c1d1,f1g1,d1e1,g1h1,e1f2,h1h2,a2a3,h2h1,a3h3
+
+Depth: 15
+S1. [ 1] 0 / 2 / 0 / Predicted(1): h5h1
+S2. [ 3] 56 / 747 / 324 / Predicted(3): d2h2,g8f8,h2h8
+S3. [ 3] 6 / 213 / 67 / Predicted(3): e2f2,h2h1,g3h3
+S4. [ 5] 123 / 1793 / 1613 / Predicted(5): e2f1,h1h2,f1f2,h2h1,e3h3
+S5. [ 9] 7702 / 33644 / 134783 / Predicted(9): f5a5,g6g7,a5a6,g7g8,e7f6,g8h7,f6f7,h7h8,a6h6 Actual(9): f5a5,g6g7,a5a6,g7h8,e7f8,h8h7,f8f7,h7h8,a6h6
+S6. [11] 7494 / 24251 / 132760 / Predicted(11): b3b1,a5a6,a3a4,a6a7,a4a5,a7a8,a5b6,a8b8,b1c1,b8a8,c1c8
+S7. [13] 30342 / 76589 / 500061 / Predicted(13): c7d6,e8f7,d6d7,f7f8,d7e6,f8g7,e6e7,g7g8,e7f6,g8h7,f6f7,h7h8,b6h6 Actual(13): c7d6,e8f7,d6d7,f7g8,d7e6,g8g7,e6e7,g7h8,e7f8,h8h7,f8f7,h7h8,b6h6
+S8. [13] 26724 / 65637 / 452468 / Predicted(13): c2d3,e1f2,d3d2,f2f1,d2e3,f1g2,e3e2,g2g1,e2f3,g1h1,f3g3,h1g1,b3b1 Actual(13): c2d3,e1f2,d3d2,f2f1,d2e3,f1g2,e3e2,g2g1,e2f3,g1h2,f3f2,h2h1,b3h3
+I3. [ 5] 182 / 1878 / 1728 / Predicted(5): d7c8,a8a7,c8c7,a7a8,d6a6
+I4. [ 9] 9808 / 33860 / 150504 / Predicted(9): c5d5,b6b7,d5d6,b7a8,d7c8,a8a7,c8c7,a7a8,d6a6 Actual(9): c5d5,b6b7,d5d6,b7b8,d7c6,b8a7,c6c7,a7a8,d6a6
+I5. [11] 7911 / 24845 / 138000 / Predicted(11): c2a2,e1f1,c1d1,f1g1,d1e1,g1h1,e1f2,h1h2,a2a3,h2h1,a3h3

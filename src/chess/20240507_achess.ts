@@ -21,7 +21,7 @@ STATE.addPiece(new Rook(0, arr[1])); // White Rook
 STATE.addPiece(new King(1, arr[2])); // Black King
 console.error(STATE.toString());
 positions.push(STATE.debugString());
-console.error(STATE.debugString().join('\n'));
+STATE.printDebugString();
 //console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
 
 let now = Date.now();
@@ -34,6 +34,7 @@ console.error(`; /*`);
 now = Date.now()-now;
 console.error(`Engine done ${now}ms`);
 console.error(`Known position: ${ENGINE.positionMinimax.size}`);
+console.error(`Deepened positions: ${ENGINE.deepenCount}`);
 console.error(`${[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).length} known positions > ${result.depth}`);
 /*
 [...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).forEach(m => {
@@ -73,7 +74,7 @@ while (result && result.move && result.evaluation === 1) {
     moveStr = this.readline(); // A move made by the opponent, e.g. a2b1
     if (false || !moveStr) {
         if (!result) throw new Error(`Unknown position: ${key}`);
-        moveStr = result.moves[0];
+        //moveStr = result.moves[0];
         console.error(`calculated opponent move: ${moveStr}`);
     } else {
         console.error(`opponentMove: ${moveStr}`);
@@ -89,7 +90,7 @@ while (result && result.move && result.evaluation === 1) {
     STATE.makeMove(move);
     STATE.nextPlayer();
     positions.push(STATE.debugString());
-    //console.error(STATE.debugString().join('\n'));
+    //STATE.printDebugString();
     key = STATE.toString();
     result = ENGINE.positionMinimax.get(key);
 }
@@ -184,7 +185,7 @@ export class State {
     isCheck(): boolean {
         let activePlayerKing = this.pieces.find(p => p instanceof King && p.player === this.activePlayer);
         if (!activePlayerKing) {
-            console.error(this.debugString().join('\n'));
+            this.printDebugString();
             throw new Error(`activePlayerKing has gone missing...`);
         }
         if (this.pieces.some(p => p.player !== this.activePlayer && p.validMoves(this).some(pos => pos.equals(activePlayerKing.position)))) return true;
@@ -346,7 +347,7 @@ export class State {
     /**
      * evaluate returns 
      * - undefined if we don't know
-     * - 0 if we know it ends in a draw
+     * - 0 if we know it ends in a draw (we're going to call this a black win to simplify)
      * - 1 if we know white wins
      * - -1 if we know black wins
      */
@@ -364,7 +365,7 @@ export class State {
             // if any next states have my king being captured, this state is illegal, we'll call it a loss
                 this.evaluation = this.activePlayer===0?-1:1;
             } else if (this.pieces.filter(p => !(p instanceof King)).length === 0) this.evaluation = -1;
-            // If both sides have only a king, it's a draw
+            // If both sides have only a king, it's a draw (which we are calling a win for black and a loss for white)
 
             this.evaluated = true;
         }
@@ -374,6 +375,15 @@ export class State {
     isEndState(): boolean {
         let evaluation = this.evaluate();
         return evaluation === 1 || evaluation === 0 || evaluation === -1;
+    }
+
+    static fromKey(key: string): State {
+        let state = new State();
+        state.addPiece(new King(0, Position.fromString(key.substring(2, 4))));
+        state.addPiece(new Rook(0, Position.fromString(key.substring(4, 6))));
+        state.addPiece(new King(1, Position.fromString(key.substring(6, 8))));
+        state.activePlayer = key.charAt(0) === 'W'?0:1;
+        return state;
     }
 
     toString() {
@@ -407,12 +417,13 @@ export class State {
             if (rankNum>0) fen += '/'
         }
         fen += ' ' + (this.activePlayer===0?'w':'b');
-        fen += ' - -';
+        fen += ' -';
         return fen;
     }
 
+    printDebugString() { console.error(this.debugString().join('\n')); }
     debugString(): string[] {
-        let lines: string[] = [' ABCDEFGH'];
+        let lines: string[] = [`${this.activePlayer?'b':'w'}ABCDEFGH`];
         for (let rankNum=7; rankNum>=0; rankNum--) {
             let line = (rankNum+1).toString();
             for (let fileNum=0; fileNum<8; fileNum++) {
@@ -420,21 +431,32 @@ export class State {
             }
             lines.push(line);
         }
-        lines.push(' ABCDEFGH');
+        lines.push(`${this.isCheck()?'+':' '}ABCDEFGH`);
         return lines;
     }
 }
 
 export type MinimaxResult = {
     evaluation?: number|undefined; // 1=WHITE WIN, 0=DRAW, -1=BLACK WIN, undefined=UNKNOWN
-    depth?: number|undefined; // how far deep have we evaluated
-    moves?: string[]; // moves to get to the specified evaluation, or empty array for undefined evaluation
+    depth: number; // how deep have we evaluated
     move?: string;
+    unknownMoves?: Map<string, Set<string>>;
 }
+
+// keep cache of:
+// move: Map<string, stateKey: string[]> - if we make a move, this is the list of all states that we could end up at for that depth
+//
+// so, if we haven't done any evaluations yet, we have:
+// { evaluation: undefined, depth: 0, move: validMoves() }
+//
+// later on, we may see something like
+// { evaluation: undefined, depth: 2, move: ['a3a4'=>[stateN1, stateN2...], 'a3c3'=>[stateM1,stateM2,stateM3...]]}
+// this would mean that we don't know what the result is after 2 moves, but a3a4 and a3c3 both get us to states that are undefined, and those state keys are listed
+// keep track of results that didn't get us an answer before running out of engine depth
 
 export class Engine {
     positionMinimax = new Map<string, MinimaxResult>();
-    positionDepth = new Map<string, number>();
+    computing = new Set<string>();
     deepenCount = 0;
 
     constructor(public maxDepth: number, public disableDebugging=false) {}
@@ -466,11 +488,10 @@ export class Engine {
         // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
         // But draw is a different case.
         // I'm going to say it's better to keep the evaluation undefined for equal or longer than it is to draw or lose
-        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && a.depth >= b.depth;
+        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && a.depth > b.depth;
         //return b.evaluation === undefined && (optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth >= b.depth)); // put off the draw/loss as long as possible
         if (a.evaluation === 0) return b.evaluation === -1*optimalEvaluation;
-        // put off the loss as long as possible if we can't win or draw
-        return optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth); // put off the draw/loss as long as possible
+        return false;
     }
 
     minimax(state: State, currentDepth = 0, remainingDepth: number = this.maxDepth, alpha: MinimaxResult = undefined, beta: MinimaxResult = undefined, debugMoves: string[] = []): MinimaxResult {
@@ -481,142 +502,158 @@ export class Engine {
         }
 
         let debug = true; //currentDepth<=2;
-        let recordMoves = true || debug;
-        if (this.disableDebugging) {
-            debug = false;
-            recordMoves = false;
-        }
+        if (this.disableDebugging) debug = false;
         const buffer = debug?''.padStart(2*currentDepth, ' '):'';
 
-        let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
-        if (this.positionDepth.has(positionKey)) {
-            if (this.positionDepth.get(positionKey) < currentDepth) {
-                throw new Error(`${positionKey} being evaluated at ${currentDepth} but previously seen at ${this.positionDepth.get(positionKey)}`);
-            }
+        let result: MinimaxResult = {depth: 0, unknownMoves: new Map([['', new Set([positionKey])]])};
+        result.evaluation = state.evaluate();
+        if (debug) {
+            console.error(`${buffer}{`);
+            console.error(`${buffer}  positionKey: "${state}", currentDepth: ${currentDepth}, remainingDepth: ${remainingDepth}, alpha: "${alpha?.evaluation}/${alpha?.depth}", beta: "${beta?.evaluation}/${beta?.depth}", evaluation: "${result.evaluation}",`);
+            console.error(`${buffer}  movesToHere: "${debugMoves.join(',')}",`);
         }
-        this.positionDepth.set(positionKey, currentDepth);
-        let cached = this.positionMinimax.get(positionKey);
-        if (cached && (cached.evaluation !== undefined || cached.depth >= remainingDepth)) {
-            result = cached;
-            if (result.depth > remainingDepth) {
-                result = {...cached};
-                result.depth = remainingDepth;
-                if (result.moves) result.moves = result.moves.slice(0, result.depth);
-            }
-        } else {
-            result.evaluation = state.evaluate();
-            if (debug) {
-                console.error(`${buffer}{`);
-                console.error(`${buffer}  positionKey: "${state}", currentDepth: ${currentDepth}, remainingDepth: ${remainingDepth}, alpha: "${alpha?.evaluation}/${alpha?.depth}", beta: "${beta?.evaluation}/${beta?.depth}", evaluation: "${result.evaluation}",`);
-                console.error(`${buffer}  movesToHere: "${debugMoves.join(',')}",`);
-            }
 
+        let cached = this.positionMinimax.get(positionKey);
+        if (cached && (cached.evaluation !== undefined || cached.depth === remainingDepth)) {
+            result = cached;
+        } else {
+            let alreadyComputing = new Set(this.computing);
             if (result.evaluation === undefined && remainingDepth > 0) {
                 result.depth = remainingDepth;
+                let nextStates: {evaluation: number, depth: number, nextMove: Map<string, State[]>} = { evaluation: undefined, depth: 0, nextMove: undefined};
+                if (cached && cached.evaluation === undefined && cached.depth > 0) {
+                    nextStates.depth = cached.depth;
+                    nextStates.nextMove = new Map([...cached.unknownMoves.entries()].map(([nextMove, stateKeySet]) => ([nextMove, [...stateKeySet.values()].map(stateKey=>State.fromKey(stateKey))])));
+                }
                 if (state.activePlayer === 0) {
+                    if (!nextStates.nextMove) {
+                        nextStates.nextMove = new Map([...state.getNextStatesSortedWhite().entries()].map(([nextMove, nextState]) => ([nextMove, [nextState]])));
+                    }
+                    [...nextStates.nextMove.values()].forEach(stateArr => stateArr.forEach(nextState => this.computing.add(nextState.toString())));
+                    if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...nextStates.nextMove.keys()]}",`);
                     let max: MinimaxResult;
-                    let nextStates = state.getNextStatesSortedWhite();
-                    nextStates.forEach(state => this.positionDepth.set(state.toString(), currentDepth+1));
-                    if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...nextStates].map(([move]) => move)}",`);
-                    for (let [nextMove, nextState] of [...nextStates]) {
-                        let nextPositionKey = nextState.toString();
-                        if (this.positionDepth.get(nextPositionKey) < currentDepth+1) continue;
-                        let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
-                        let line = '';
-                        if (debug) line = `${buffer}  ${nextMove}:`;
-                        if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
-                            if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
-                            if (debug) console.error(line);
-                            nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max?.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
-                            nsr.depth++;
-                            nsr.move = nextMove;
-                            if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
-                            if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" }, `);
-                        } else {
-                            if (debug) {
-                                line += `{`;
-                                if (this.positionMinimax.has(nextPositionKey)) line += ` cached: true, positionKey: "${nextPositionKey}",`;
-                                if (nsr.evaluation !== undefined) line += ` status: "evaluationCalculated: ${nsr.evaluation}",`;
-                                else if (max.evaluation === 1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${max.depth}",`;
-                                else if (nsr.depth+1 >= max.depth) line += ` status: "deeperThanMax",`;
+                    OUTER_WHITE: for (let [nextMove, stateArr] of nextStates.nextMove) {
+                        for (let nextState of stateArr) {
+                            let nextPositionKey = nextState.toString();
+                            if (alreadyComputing.has(nextPositionKey)) continue;
+                            //let nsr = nextStates.depth>0?this.positionMinimax.get(nextPositionKey) ?? { depth: 0 }:{depth:0};
+                            let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0 };
+                            let line = '';
+                            if (debug) line = `${buffer}  ${nextMove}:`;
+                            if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
+                                if (this.positionMinimax.has(nextPositionKey) && this.positionMinimax.get(nextPositionKey).depth > 0) this.deepenCount++;
+                                if (debug) console.error(line);
+                                nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max?.evaluation===1?max.depth:remainingDepth-nextStates.depth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
+                                nsr.depth++;
+                                nsr.move = nextMove;
+                                if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth} } }, `);
+                            } else {
+                                if (debug) {
+                                    line += `{`;
+                                    if (this.positionMinimax.has(nextPositionKey)) line += ` cached: true, positionKey: "${nextPositionKey}",`;
+                                    if (nsr.evaluation !== undefined) line += ` status: "evaluationCalculated: ${nsr.evaluation}",`;
+                                    else if (max.evaluation === 1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${max.depth}",`;
+                                    else if (nsr.depth+1 >= max.depth) line += ` status: "deeperThanMax",`;
+                                }
+                                if (nsr.depth+1 > remainingDepth) {
+                                    if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
+                                    continue;
+                                }
+                                nsr = {...nsr};
+                                nsr.depth++;
+                                nsr.move = nextMove;
+                                if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth} } }, `);
                             }
-                            if (nsr.depth+1 > remainingDepth) {
-                                if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                                continue;
+                            if (!max || this.isPreferredForWhite(nsr, max)) {
+                                if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MAX: { old_evaluation: ${max?.evaluation}, old_depth: ${max?.depth} }, `);
+                                if (!max || nsr.evaluation !== undefined) {
+                                    max = {...nsr};
+                                    max.unknownMoves = undefined;
+                                }
+                                if (beta && this.isPreferredForWhite(max, beta)) {
+                                    if (debug) console.error(`${buffer}  ${nextMove}_BETA_BREAK: true, `);
+                                    break OUTER_WHITE;
+                                }
+                                if (max.evaluation !== undefined && (!alpha || this.isPreferredForWhite(max, alpha))) alpha = max;
                             }
-                            nsr = {...nsr};
-                            nsr.depth++;
-                            nsr.move = nextMove;
-                            if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
-                            if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" } }, `);
-                        }
-                        if (!max || this.isPreferredForWhite(nsr, max)) {
-                            if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MAX: { old_evaluation: ${max?.evaluation}, old_depth: ${max?.depth} }, `);
-                            max = nsr;
-                            if (beta && this.isPreferredForWhite(max, beta)) {
-                                if (debug) console.error(`${buffer}  ${nextMove}_BETA_BREAK: true, `);
-                                break;
+                            if (nsr.evaluation === undefined && max.evaluation === undefined) {
+                                // bring the unresolved move states up to this max so we can return it
+                                if (max.unknownMoves === undefined) max.unknownMoves = new Map<string, Set<string>>();
+                                max.unknownMoves.set(nextMove, new Set<string>([...nsr.unknownMoves.values()].flatMap(strSet => [...strSet.values()])));
                             }
-                            if (!alpha || this.isPreferredForWhite(max, alpha)) alpha = max;
                         }
                     }
                     if (max) result = max;
+                    [...nextStates.nextMove.values()].forEach(stateArr => stateArr.forEach(nextState => this.computing.delete(nextState.toString())));
                 } else {
+                    if (!nextStates.nextMove) {
+                        nextStates.nextMove = new Map([...state.getNextStatesSortedBlack().entries()].map(([nextMove, nextState]) => ([nextMove, [nextState]])));
+                    }
+                    [...nextStates.nextMove.values()].forEach(stateArr => stateArr.forEach(nextState => this.computing.add(nextState.toString())));
+                    if (debug) console.error(`${buffer}  player: "BLACK", nextMoves: "${[...nextStates.nextMove.keys()]}",`);
                     let min: MinimaxResult;
-                    let nextStates = state.getNextStatesSortedBlack();
-                    nextStates.forEach(state => this.positionDepth.set(state.toString(), currentDepth+1));
-                    if (debug) console.error(`${buffer}  player: "BLACK", nextMoves: "${[...nextStates].map(([move]) => move)}",`);
-                    for (let [nextMove, nextState] of [...nextStates]) {
-                        let nextPositionKey = nextState.toString();
-                        //if (this.positionDepth.get(nextPositionKey) < currentDepth+1) continue;
-                        let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
-                        let line = '';
-                        if (debug) line = `${buffer}  ${nextMove}:`;
-                        if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
-                            if (this.positionMinimax.has(nextPositionKey)) this.deepenCount++;
-                            if (debug) console.error(line);
-                            nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min?.evaluation===-1||min?.evaluation===0?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
-                            nsr.depth++;
-                            nsr.move = nextMove;
-                            if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
-                            if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" }, `);
-                        } else {
-                            if (debug) {
-                                line += `{`;
-                                if (this.positionMinimax.has(nextPositionKey)) line += ` cached: true, positionKey: "${nextPositionKey}",`;
-                                if (nsr.evaluation !== undefined) line += ` status: "evaluationCalculated: ${nsr.evaluation}",`;
-                                else if (min.evaluation === -1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${min.depth}",`;
-                                else if (nsr.depth+1 >= min.depth) line += ` status: "deeperThanMin",`;
+                    OUTER_BLACK: for (let [nextMove, stateArr] of nextStates.nextMove) {
+                        for (let nextState of stateArr) {
+                            let nextPositionKey = nextState.toString();
+                            if (alreadyComputing.has(nextPositionKey)) continue;
+                            //let nsr = nextStates.depth>0?this.positionMinimax.get(nextPositionKey) ?? { depth: 0 }:{depth:0};
+                            let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0 };
+                            let line = '';
+                            if (debug) line = `${buffer}  ${nextMove}:`;
+                            if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
+                                if (this.positionMinimax.has(nextPositionKey) && this.positionMinimax.get(nextPositionKey).depth > 0) this.deepenCount++;
+                                if (debug) console.error(line);
+                                nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min?.evaluation===-1||min?.evaluation===0?min.depth:remainingDepth-nextStates.depth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
+                                nsr.depth++;
+                                nsr.move = nextMove;
+                                if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth} }, `);
+                            } else {
+                                if (debug) {
+                                    line += `{`;
+                                    if (this.positionMinimax.has(nextPositionKey)) line += ` cached: true, positionKey: "${nextPositionKey}",`;
+                                    if (nsr.evaluation !== undefined) line += ` status: "evaluationCalculated: ${nsr.evaluation}",`;
+                                    else if (min.evaluation === -1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${min.depth}",`;
+                                    else if (nsr.depth+1 >= min.depth) line += ` status: "deeperThanMin",`;
+                                }
+                                if (nsr.depth+1 > remainingDepth) {
+                                    if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
+                                    continue;
+                                }
+                                nsr = {...nsr};
+                                nsr.depth++;
+                                nsr.move = nextMove;
+                                if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth} } }, `);
                             }
-                            if (nsr.depth+1 > remainingDepth) {
-                                if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                                continue;
+                            if (!min || this.isPreferredForBlack(nsr, min)) {
+                                if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MIN: { old_evaluation: ${min?.evaluation}, old_depth: ${min?.depth} }, `);
+                                if (!min || nsr.evaluation !== undefined) {
+                                    min = {...nsr};
+                                    min.unknownMoves = undefined;
+                                }
+                                if (alpha && this.isPreferredForBlack(min, alpha)) {
+                                    if (debug) console.error(`${buffer}  ${nextMove}_ALPHA_BREAK: true, `);
+                                    break OUTER_BLACK;
+                                }
+                                if (min.evaluation !== undefined && (!beta || this.isPreferredForBlack(min, beta))) beta = min;
                             }
-                            nsr = {...nsr};
-                            nsr.depth++;
-                            nsr.move = nextMove;
-                            if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
-                            if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" } }, `);
-                        }
-                        if (!min || this.isPreferredForBlack(nsr, min)) {
-                            if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MIN: { old_evaluation: ${min?.evaluation}, old_depth: ${min?.depth} }, `);
-                            min = nsr;
-                            if (alpha && this.isPreferredForBlack(min, alpha)) {
-                                if (debug) console.error(`${buffer}  ${nextMove}_ALPHA_BREAK: true, `);
-                                break;
+                            if (nsr.evaluation === undefined && min.evaluation === undefined) {
+                                // bring the unresolved move states up to this min so we can return it
+                                if (min.unknownMoves === undefined) min.unknownMoves = new Map<string, Set<string>>();
+                                min.unknownMoves.set(nextMove, new Set<string>([...nsr.unknownMoves.values()].flatMap(strSet => [...strSet.values()])));
                             }
-                            if (!beta || this.isPreferredForBlack(min, beta)) beta = min;
                         }
                     }
                     if (min) result = min;
+                    [...nextStates.nextMove.values()].forEach(stateArr => stateArr.forEach(nextState => this.computing.delete(nextState.toString())));
                 }
             }
 
             if (debug) {
-                console.error(`${buffer}  evaluation: "${result.evaluation}", depth: "${result.depth}", moves: "${result.moves}"`);
+                console.error(`${buffer}  evaluation: "${result.evaluation}", depth: "${result.depth}"`);
                 console.error(`${buffer}}`);
             }
+            if (result.evaluation !== undefined) result.unknownMoves = undefined;
             this.positionMinimax.set(positionKey, result);
         }
         return result;
