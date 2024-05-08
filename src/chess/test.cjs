@@ -77,7 +77,7 @@ async function testPosition(caseName, krkStr, solutionDepth, depth = 13) {
     let ENGINE = new Engine(depth, true);
     let result = ENGINE.minimax(STATE);
     now = Date.now()-now;
-    process.stdout.write(`${caseName}. [${solutionDepth.toString().padStart(2)}] ${now} / ${ENGINE.positionMinimax.size} / ${ENGINE.deepenCount}`);
+    process.stdout.write(`${caseName}. [${solutionDepth.toString().padStart(2)}] ${now} / ${ENGINE.positionMinimax.size}`);
     let originalResult = result;
     let moves = [];
 
