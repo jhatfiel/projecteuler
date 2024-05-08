@@ -22,10 +22,9 @@ STATE.addPiece(new King(1, arr[2])); // Black King
 console.error(STATE.toString());
 positions.push(STATE.debugString());
 console.error(STATE.debugString().join('\n'));
-//console.error(`Equivalent positions: ${STATE.equivalentPositions()}`);
 
 let now = Date.now();
-let ENGINE = new Engine(9);
+let ENGINE = new Engine(15);
 console.error(`Starting engine ${ENGINE.maxDepth}`);
 
 console.error(`*/obj=`);
@@ -33,16 +32,9 @@ let result = ENGINE.minimax(STATE);
 console.error(`; /*`);
 now = Date.now()-now;
 console.error(`Engine done ${now}ms`);
-console.error(`NextMoves time: ${State.getNextMovesTime}, NextState time: ${State.getNextStatesTime}, White=${State.getNextStatesSortedWhiteTime}, Black=${State.getNextStatesSortedBlackTime}`);
 console.error(`Known position: ${ENGINE.positionMinimax.size}`);
 console.error(`${[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).length} known positions > ${result.depth}`);
-/*
-[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).forEach(m => {
-    console.error(`Known position: ${m.evaluation},${m.depth},${m.moves}`);
-})
-*/
 
-///  code
 console.error(JSON.stringify(result));
 
 let key = STATE.toString();
@@ -233,10 +225,6 @@ export class State {
         }
     }
 
-    getActiveKing(): Piece {
-        return this.activePlayer === 0 ? this.getWhiteKing() : this.getBlackKing();
-    }
-
     getInactiveKing(): Piece {
         return this.activePlayer === 0 ? this.getBlackKing() : this.getWhiteKing();
     }
@@ -256,8 +244,8 @@ export class State {
             } else {
                 this.score = 4.7 * bkp.distanceFromCenter() + 1.6 * (14 - bkp.distanceBetween(wkp));
 
-                // if we aren't within attack range of the king, then let's get as close as possible
-                //this.score = 1.6 * (7-Math.min(Math.abs(wr.position.getRank() - bk.position.getRank()), Math.abs(wr.position.getFile() - bk.position.getFile())))
+                // if we aren't within attack range of the king, then let's attack the king with the rook
+                //this.score = this.score * (7-Math.min(Math.abs(wrp.getRank() - bkp.getRank()), Math.abs(wrp.getFile() - bkp.getFile())))
                 if (wrp.getRank() === bkp.getRank() ||
                     wrp.getFile() === bkp.getFile()) this.score *= 1.5;
             }
@@ -271,9 +259,7 @@ export class State {
             this.getBlackKing()?.potentialMoves(this)?.some(pos => pos && pos.equals(this.getWhiteKing()?.position));
     }
 
-    static getNextMovesTime = 0;
     getNextMoves(): string[] {
-        //let now = Date.now();
         let nextMovesCache = State.nextMovesCache.get(this.toString());
         if (!nextMovesCache) {
             let nextMoves = [];
@@ -315,13 +301,11 @@ export class State {
                 this.addPiece(piece);
             });
         }
-        //State.getNextMovesTime += Date.now() - now;
         return nextMovesCache.nextMoves;
     }
 
     static getNextStatesTime = 0;
     getNextStates(): Map<string, State> {
-        //let now = Date.now();
         let result = new Map<string, State>();
         this.getNextMoves().forEach(moveStr => {
             let state = this.clone();
@@ -329,25 +313,20 @@ export class State {
             state.nextPlayer();
             result.set(moveStr, state);
         });
-        //State.getNextStatesTime += Date.now()-now;
         return result;
     }
 
-    static getNextStatesSortedWhiteTime = 0;
     getNextStatesSortedWhite(): Map<string, State> {
-        //let now = Date.now();
+        if (State.nextMovesCache.get(this.toString()).sorted) return this.getNextStates();
         let result = [...this.getNextStates()].sort((a,b) => b[1].getScore() - a[1].getScore());
         State.nextMovesCache.set(this.toString(), {sorted: true, nextMoves: result.map(el => el[0])});
-        //State.getNextStatesSortedWhiteTime += Date.now() - now;
         return new Map(result);
     }
 
-    static getNextStatesSortedBlackTime = 0;
     getNextStatesSortedBlack(): Map<string, State> {
-        //let now = Date.now();
+        if (State.nextMovesCache.get(this.toString()).sorted) return this.getNextStates();
         let result = [...this.getNextStates()].sort((a,b) => a[1].getScore() - b[1].getScore());
         State.nextMovesCache.set(this.toString(), {sorted: true, nextMoves: result.map(el => el[0])});
-        //State.getNextStatesSortedBlackTime += Date.now() - now;
         return new Map(result);
     }
 
@@ -379,21 +358,15 @@ export class State {
             // if any next states have my king being captured, this state is illegal, we'll call it a loss
                 this.evaluation = this.activePlayer===0?-1:1;
             } else if (this.getWhiteRook() === undefined) this.evaluation = -1;
-            // If both sides have only a king, it's a draw
+            // If both sides have only a king, it's a draw, which we are counting as a loss since white should REALLY win...
 
             this.evaluated = true;
         }
         return this.evaluation;
     }
 
-    isEndState(): boolean {
-        let evaluation = this.evaluate();
-        return evaluation === 1 || evaluation === 0 || evaluation === -1;
-    }
-
     toString() {
         if (!this.id) {
-            //return `${this.activePlayer===0?'W':'B'}:${this.pieces.sort(Piece.Sort).map(p => p.toString()).join('/')}`;
             this.id = `${this.activePlayer===0?'W':'B'}:${
                 [this.getWhiteKing(),
                  this.getWhiteRook(),
@@ -415,7 +388,6 @@ export class State {
     toFEN(): string {
         let fen = '';
         for (let rankNum=7; rankNum>=0; rankNum--) {
-            //let rankPieces = this.pieces.filter(p => p.position.rankNum === rankNum).sort((a,b) => a.position.file.localeCompare(b.position.file));
             let line = Array.from({length: 8});
             this.pieces.filter(p => p.position.getRank() === rankNum).forEach(p => line[p.position.getFile()] = p.getPieceLetter());
             let num = 0;
@@ -462,8 +434,6 @@ export type MinimaxResult = {
 
 export class Engine {
     positionMinimax = new Map<string, MinimaxResult>();
-    positionDepth = new Map<string, number>();
-    deepenCount = 0;
 
     constructor(public maxDepth: number, public disableDebugging=false) {}
 
@@ -482,11 +452,8 @@ export class Engine {
     }
 
     minimax(state: State, currentDepth = 0, remainingDepth: number = this.maxDepth, alpha: MinimaxResult = undefined, beta: MinimaxResult = undefined, debugMoves: string[] = []): MinimaxResult {
-        if (alpha) { alpha = {...alpha}; alpha.depth = Math.max(0, alpha.depth-1); }
-        if (beta) { beta = {...beta}; beta.depth = Math.max(0, beta.depth-1); }
-        if (currentDepth > 20 || alpha?.depth < 0 || beta?.depth < 0) {
-            throw new Error(`Way too deep! ${currentDepth}/${alpha?.depth}/${beta?.depth}`);
-        }
+        if (alpha) { alpha = {...alpha}; alpha.depth--; }
+        if (beta) { beta = {...beta}; beta.depth--; }
 
         let debug = false; // currentDepth<=2;
         let recordMoves = false || debug;
@@ -498,7 +465,6 @@ export class Engine {
 
         let result: MinimaxResult = {depth: 0, moves: []};
         let positionKey = state.toString();
-        this.positionDepth.set(positionKey, currentDepth);
         let cached = this.positionMinimax.get(positionKey);
         if (cached && (cached.evaluation !== undefined || cached.depth >= remainingDepth)) {
             result = cached;
@@ -520,19 +486,15 @@ export class Engine {
                 if (state.activePlayer === 0) {
                     let max: MinimaxResult;
                     let nextStates = state.getNextStatesSortedWhite();
-                    nextStates.forEach(state => this.positionDepth.set(state.toString(), currentDepth+1));
                     if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...nextStates].map(([move, state]) => move.toString()+'-'+state.getScore().toFixed(1))}",`);
                     for (let [nextMove, nextState] of [...nextStates]) {
                         let nextPositionKey = nextState.toString();
-                        if (this.positionDepth.get(nextPositionKey) < currentDepth+1) continue;
                         let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
                         let line = '';
                         if (debug) line = `${buffer}  ${nextMove}:`;
                         if (nsr.evaluation === undefined && (!max || nsr.depth+1 < max.depth || max.evaluation !== 1)) {
                             if (debug) console.error(line);
                             nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, max?.evaluation===1?max.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
-                            nsr.depth++;
-                            nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                             if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" }, `);
                         } else {
@@ -550,11 +512,11 @@ export class Engine {
                                 nsr.depth = remainingDepth - 1;
                                 if (nsr.moves) nsr.moves = nsr.moves.slice(0, nsr.depth);
                             }
-                            nsr.depth++;
-                            nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                             if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" } }, `);
                         }
+                        nsr.depth++;
+                        nsr.move = nextMove;
                         if (!max || this.isPreferredForWhite(nsr, max)) {
                             if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MAX: { old_evaluation: ${max?.evaluation}, old_depth: ${max?.depth} }, `);
                             max = nsr;
@@ -569,19 +531,15 @@ export class Engine {
                 } else {
                     let min: MinimaxResult;
                     let nextStates = state.getNextStatesSortedBlack();
-                    nextStates.forEach(state => this.positionDepth.set(state.toString(), currentDepth+1));
                     if (debug) console.error(`${buffer}  player: "BLACK", nextMoves: "${[...nextStates].map(([move]) => move)}",`);
                     for (let [nextMove, nextState] of [...nextStates]) {
                         let nextPositionKey = nextState.toString();
-                        //if (this.positionDepth.get(nextPositionKey) < currentDepth+1) continue;
                         let nsr = this.positionMinimax.get(nextPositionKey) ?? { depth: 0, moves: []};
                         let line = '';
                         if (debug) line = `${buffer}  ${nextMove}:`;
                         if (nsr.evaluation === undefined && (!min || nsr.depth+1 < min.depth || min.evaluation !== -1)) {
                             if (debug) console.error(line);
                             nsr = {...this.minimax(nextState, currentDepth+1, Math.min(remainingDepth, min?.evaluation===-1||min?.evaluation===0?min.depth:remainingDepth)-1, alpha, beta, debug?[...debugMoves, nextMove]:debugMoves)};
-                            nsr.depth++;
-                            nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                             if (debug) console.error(`${buffer}  , ${nextMove}result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" }, `);
                         } else {
@@ -599,11 +557,11 @@ export class Engine {
                                 nsr.depth = remainingDepth - 1;
                                 if (nsr.moves) nsr.moves = nsr.moves.slice(0, nsr.depth);
                             }
-                            nsr.depth++;
-                            nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
                             if (debug) console.error(`${line} result: { evaluation: ${nsr.evaluation}, depth: ${nsr.depth}, moves: "${nsr.moves}" } }, `);
                         }
+                        nsr.depth++;
+                        nsr.move = nextMove;
                         if (!min || this.isPreferredForBlack(nsr, min)) {
                             if (debug) console.error(`${buffer}  ${nextMove}_IS_NEW_MIN: { old_evaluation: ${min?.evaluation}, old_depth: ${min?.depth} }, `);
                             min = nsr;
@@ -621,17 +579,6 @@ export class Engine {
             if (debug) {
                 console.error(`${buffer}  evaluation: "${result.evaluation}", depth: "${result.depth}", moves: "${result.moves}"`);
                 console.error(`${buffer}}`);
-            }
-            if (cached) {
-                this.deepenCount++;
-                /*
-                let reprocessArr = this.reprocess.get(positionKey);
-                if (!reprocessArr) {
-                    reprocessArr = [];
-                    this.reprocess.set(positionKey, reprocessArr);
-                }
-                reprocessArr.push({newDepth: remainingDepth, newResult: result, originalDepth: cached.depth, originalResult: cached});
-                */
             }
             this.positionMinimax.set(positionKey, result);
         }
