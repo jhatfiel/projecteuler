@@ -1,0 +1,1 @@
+node --experimental-specifier-resolution=node dist/out-tsc/chess/test
