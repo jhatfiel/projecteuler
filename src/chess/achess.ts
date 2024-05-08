@@ -33,6 +33,7 @@ let result = ENGINE.minimax(STATE);
 console.error(`; /*`);
 now = Date.now()-now;
 console.error(`Engine done ${now}ms`);
+console.error(`NextMoves time: ${State.getNextMovesTime}, NextState time: ${State.getNextStatesTime}, White=${State.getNextStatesSortedWhiteTime}, Black=${State.getNextStatesSortedBlackTime}`);
 console.error(`Known position: ${ENGINE.positionMinimax.size}`);
 console.error(`${[...ENGINE.positionMinimax.values()].filter(m => m.depth > result.depth).length} known positions > ${result.depth}`);
 /*
@@ -106,6 +107,15 @@ if (!STATE.isCheck()) {
 }
 
 export class Position {
+    static cmdLookup = [6, 5, 4, 3, 3, 4, 5, 6, 
+                        5, 4, 3, 2, 2, 3, 4, 5, 
+                        4, 3, 2, 1, 1, 2, 3, 4, 
+                        3, 2, 1, 0, 0, 1, 2, 3, 
+                        3, 2, 1, 0, 0, 1, 2, 3, 
+                        4, 3, 2, 1, 1, 2, 3, 4, 
+                        5, 4, 3, 2, 2, 3, 4, 5, 
+                        6, 5, 4, 3, 3, 4, 5, 6];
+
     constructor(public pos: number) {}
     static fromString(s: string): Position {
         return new Position(((s.charCodeAt(0) - 'a'.charCodeAt(0))<<3) + (s.charCodeAt(1) - '1'.charCodeAt(0)));
@@ -119,9 +129,10 @@ export class Position {
         return Math.abs(this.getRank() - b.getRank()) + Math.abs(this.getFile() - b.getFile());
     }
     distanceFromCenter(): number {
-        return Math.max(3-Math.min(this.getFile(), 7-this.getFile()), 3-Math.min(this.getRank(), 7-this.getRank()));
+        return Position.cmdLookup[this.pos];
+        //return Math.max(3-Math.min(this.getFile(), 7-this.getFile()), 3-Math.min(this.getRank(), 7-this.getRank()));
     }
-    equals(b: Position): boolean { return this.pos === b.pos; }
+    equals(b: Position): boolean { return this.pos === b?.pos; }
     toString(): string { return `${this.getFileStr()}${this.getRankStr()}`; }
 }
 
@@ -129,7 +140,7 @@ export abstract class Piece {
     abstract letter: string;
     abstract value: number;
     constructor(public player: number, public position: Position) {} // player=0 is white, 1 is black
-    abstract validMoves(state: State): Position[];
+    abstract potentialMoves(state: State): Position[];
     clone(): Piece {
        return new (<any>this.constructor)(this.player, this.position);
     }
@@ -143,9 +154,18 @@ export function moveToString(move: Move) { return `${move.piece.position.toStrin
 export class State {
     activePlayer = 0;
     pieces: Piece[] = [];
-    nextMoves: string[];
+    static nextMovesCache = new Map<string, {sorted: boolean, nextMoves: string[]}>();
+    id: string;
     evaluated = false;
     evaluation: number;
+
+    piecesFound = false;
+    WHITE_KING: Piece;
+    WHITE_ROOK: Piece;
+    BLACK_KING: Piece;
+
+    scored = false;
+    score: number;
 
     moveFromString(str: string): Move {
         let pos = Position.fromString(str.substring(0, 2));
@@ -165,55 +185,143 @@ export class State {
     }
 
     addPiece(p: Piece) { this.pieces.push(p); }
-    removePiece(pos: Position) { this.pieces = this.pieces.filter(p => !p.position.equals(pos)); }
-    getPieceAtPosition(pos: Position): Piece {  return this.pieces.find(p => p.position.equals(pos)); }
+    removePiece(pos: Position) {
+        this.pieces = this.pieces.filter(p => !p.position.equals(pos));
+    }
+    getPieceAtPosition(pos: Position): Piece {
+        return this.pieces.find(p => p.position.equals(pos));
+    }
 
     makeMove(move: Move) {
         this.removePiece(move.position);
         this.getPieceAtPosition(move.piece.position).position = move.position;
         this.evaluated = false;
-        this.nextMoves = undefined;
+        this.id = undefined;
+        this.piecesFound = false;
+        this.scored = false;
     }
 
     nextPlayer() {
         this.activePlayer = this.activePlayer===0?1:0;
         this.evaluated = false;
-        this.nextMoves = undefined;
+        this.id = undefined;
+        this.piecesFound = false;
+        this.scored = false;
+    }
+
+    getWhiteKing(): Piece {
+        this.findPieces();
+        return this.WHITE_KING;
+    }
+
+    getWhiteRook(): Piece {
+        this.findPieces();
+        return this.WHITE_ROOK;
+    }
+
+    getBlackKing(): Piece {
+        this.findPieces();
+        return this.BLACK_KING;
+    }
+
+    findPieces() {
+        if (!this.piecesFound) {
+            this.piecesFound = true;
+            this.BLACK_KING = this.pieces.find(p => p instanceof King && p.player === 1);
+            this.WHITE_ROOK = this.pieces.find(p => p instanceof Rook);
+            this.WHITE_KING = this.pieces.find(p => p instanceof King && p.player === 0);
+        }
+    }
+
+    getActiveKing(): Piece {
+        return this.activePlayer === 0 ? this.getWhiteKing() : this.getBlackKing();
+    }
+
+    getInactiveKing(): Piece {
+        return this.activePlayer === 0 ? this.getBlackKing() : this.getWhiteKing();
+    }
+
+    getScore(): number {
+        if (!this.scored) {
+            this.scored = true;
+            let wkp = this.getWhiteKing().position;
+            let wrp = this.getWhiteRook()?.position;
+            let bkp = this.getBlackKing().position;
+            if (!this.getWhiteRook()) {
+                this.score = -1000;
+            } else if (Math.abs(wrp.getFile() - bkp.getFile()) <= 1 && Math.abs(wrp.getRank() - bkp.getRank()) <= 1 && 
+                      !(Math.abs(wrp.getFile() - wkp.getFile()) <= 1 && Math.abs(wrp.getRank() - wkp.getRank()) <= 1)) {
+                // if the rook can be attacked by the black king and isn't protected by the white king, that's bad
+                this.score = -500;
+            } else {
+                this.score = 4.7 * bkp.distanceFromCenter() + 1.6 * (14 - bkp.distanceBetween(wkp));
+
+                // if we aren't within attack range of the king, then let's get as close as possible
+                //this.score = 1.6 * (7-Math.min(Math.abs(wr.position.getRank() - bk.position.getRank()), Math.abs(wr.position.getFile() - bk.position.getFile())))
+                if (wrp.getRank() === bkp.getRank() ||
+                    wrp.getFile() === bkp.getFile()) this.score *= 1.5;
+            }
+        }
+        return this.score;
     }
 
     isCheck(): boolean {
-        let activePlayerKing = this.pieces.find(p => p instanceof King && p.player === this.activePlayer);
-        if (!activePlayerKing) {
-            console.error(this.debugString().join('\n'));
-            throw new Error(`activePlayerKing has gone missing...`);
-        }
-        if (this.pieces.some(p => p.player !== this.activePlayer && p.validMoves(this).some(pos => pos.equals(activePlayerKing.position)))) return true;
-        return false;
+        return this.activePlayer === 1 ?
+            [...this.getWhiteKing()?.potentialMoves(this)??[], ...this.getWhiteRook()?.potentialMoves(this)??[]].some(pos => pos && pos.equals(this.getBlackKing()?.position)) :
+            this.getBlackKing()?.potentialMoves(this)?.some(pos => pos && pos.equals(this.getWhiteKing()?.position));
     }
 
+    static getNextMovesTime = 0;
     getNextMoves(): string[] {
-        if (!this.nextMoves) {
-            this.nextMoves = [];
-            this.pieces.filter(p => p.player === this.activePlayer).forEach(p => {
-                p.validMoves(this).forEach(position => {
+        //let now = Date.now();
+        let nextMovesCache = State.nextMovesCache.get(this.toString());
+        if (!nextMovesCache) {
+            let nextMoves = [];
+            nextMovesCache = { sorted: false, nextMoves };
+            State.nextMovesCache.set(this.toString(), nextMovesCache);
+
+            let blackKing = this.getBlackKing();
+            let whiteKing = this.getWhiteKing();
+            let whiteRook = this.getWhiteRook();
+            this.pieces.filter(piece => piece.player === this.activePlayer).forEach(piece => {
+                this.removePiece(piece.position);
+                piece.potentialMoves(this).forEach(position => {
+                    let validMove = true;
+                    // there are only 3 pieces to deal with, let's brute force this without creating a bunch of new states...
+                    if (this.activePlayer === 0) {
+                        // white to move, we just have to make sure we don't put our king near the black king
+                        validMove = (piece instanceof Rook && !position.equals(whiteKing.position)) ||
+                                    (piece instanceof King && !position.equals(whiteRook?.position) && !blackKing?.potentialMoves(this)?.some(pos => pos.equals(position)));
+                    } else {
+                        // black to move, we can't move our king to a spot that could be attacked by the white king or white rook
+                        validMove = ![...whiteKing.potentialMoves(this)??[], ...whiteRook?.potentialMoves(this)??[]].some(pos => pos.equals(position));
+                    }
+                    /*
                     // try this move
                     let state = this.clone();
-                    let move = {piece: p.clone(), position};
+                    let move = {piece: piece.clone(), position};
                     state.makeMove(move);
     
                     // if current player is in check, this is an invalid move
                     if (!state.isCheck()) {
                         state.nextPlayer();
-                        this.nextMoves.push(moveToString(move));
+                        nextMoves.push(moveToString(move));
+                    }
+                    */
+                    if (validMove) {
+                        nextMoves.push(moveToString({piece, position}));
                     }
                 });
+                this.addPiece(piece);
             });
-
         }
-        return this.nextMoves;
+        //State.getNextMovesTime += Date.now() - now;
+        return nextMovesCache.nextMoves;
     }
 
+    static getNextStatesTime = 0;
     getNextStates(): Map<string, State> {
+        //let now = Date.now();
         let result = new Map<string, State>();
         this.getNextMoves().forEach(moveStr => {
             let state = this.clone();
@@ -221,119 +329,26 @@ export class State {
             state.nextPlayer();
             result.set(moveStr, state);
         });
+        //State.getNextStatesTime += Date.now()-now;
         return result;
     }
 
+    static getNextStatesSortedWhiteTime = 0;
     getNextStatesSortedWhite(): Map<string, State> {
-        type sortingArrayType = {
-            nextState: State;
-            followingStates: Map<string, State>
-            evaluation: number;
-            wk: Piece;
-            wr: Piece;
-            bk: Piece;
-        }
-
-        let sortingArray = [...this.getNextStates()].map(v => [v[0], {
-            nextState: v[1],
-            followingStates: v[1].getNextStates(),
-            evaluation: v[1].evaluate(),
-            wk: v[1].pieces.find(p => p instanceof King && p.player === 0),
-            wr: v[1].pieces.find(p => p instanceof Rook && p.player === 0),
-            bk: v[1].pieces.find(p => p instanceof King && p.player === 1)
-        }] as [string, sortingArrayType]);
-
-        sortingArray.sort(([aStr, aObj], [bStr, bObj]) => {
-            let a = aObj.nextState;
-            let b = bObj.nextState;
-            let ae = aObj.evaluation;
-            let be = bObj.evaluation;
-            let ans = aObj.followingStates;
-            let bns = bObj.followingStates;
-            let awk = aObj.wk;
-            let awr = aObj.wr;
-            let abk = aObj.bk;
-            let bwk = bObj.wk;
-            let bwr = bObj.wr;
-            let bbk = bObj.bk;
-
-            // undefined just means we don't know who wins this position
-            if (ae === undefined && be === undefined) {
-                // choose the move that pushes the black king further into the corners/sides
-                let aAverageKingDFC = [...ans.values()]
-                                        .map(ns => ns.pieces.find(p => p instanceof King && p.player === 1).position.distanceFromCenter())
-                                        .reduce((acc, d) => acc += d, 0) / ans.size;
-                let bAverageKingDFC = [...bns.values()]
-                                        .map(ns => ns.pieces.find(p => p instanceof King && p.player === 1).position.distanceFromCenter())
-                                        .reduce((acc, d) => acc += d, 0) / bns.size;
-                if (aAverageKingDFC !== bAverageKingDFC) return bAverageKingDFC - aAverageKingDFC;
-                
-                // available moves?
-                if (ans.size !== bns.size) return ans.size - bns.size;
-
-                // distance between kings?
-                let ad = awk.position.distanceBetween(abk.position);
-                let bd = bwk.position.distanceBetween(bbk.position);
-                if (ad !== bd) return ad - bd;
-
-                // add in distance between rook and king file/rank - we want to minimize that as well right?
-
-                let aFRDelta = Math.min(Math.abs(awr.position.getFile() - abk.position.getFile()), Math.abs(awr.position.getRank() - abk.position.getRank()));
-                let bFRDelta = Math.min(Math.abs(bwr.position.getFile() - bbk.position.getFile()), Math.abs(bwr.position.getRank() - bbk.position.getRank()));
-
-                if (aFRDelta !== bFRDelta) return aFRDelta - bFRDelta;
-
-                return a.toString().localeCompare(b.toString());
-            }
-
-            if (ae === undefined) return 1//(be <= 0)?1:-1;
-            if (be === undefined) return -1//(ae <= 0)?-1:1;
-            return be - ae; // just sort by the best score
-        });
-
-        return new Map(sortingArray.map(v => [v[0], v[1].nextState]));
+        //let now = Date.now();
+        let result = [...this.getNextStates()].sort((a,b) => b[1].getScore() - a[1].getScore());
+        State.nextMovesCache.set(this.toString(), {sorted: true, nextMoves: result.map(el => el[0])});
+        //State.getNextStatesSortedWhiteTime += Date.now() - now;
+        return new Map(result);
     }
 
+    static getNextStatesSortedBlackTime = 0;
     getNextStatesSortedBlack(): Map<string, State> {
-        type sortingArrayType = {
-            nextState: State;
-            evaluation: number;
-            bk: Piece;
-            numPieces: number;
-        }
-
-        let sortingArray = [...this.getNextStates()].map(v => [v[0], {
-            nextState: v[1],
-            evaluation: v[1].evaluate(),
-            bk: v[1].pieces.find(p => p instanceof King && p.player === 1),
-            numPieces: v[1].pieces.length
-        }] as [string, sortingArrayType]);
-
-        sortingArray.sort(([aStr, aObj], [bStr, bObj]) => {
-            let ae = aObj.evaluation;
-            let be = bObj.evaluation;
-            let abk = aObj.bk;
-            let bbk = bObj.bk;
-
-            // black should ALWAYS choose the path that takes a piece
-            if (aObj.numPieces !== bObj.numPieces) return aObj.numPieces - bObj.numPieces;
-
-            // undefined just means we don't know who wins this position
-            if (ae === undefined && be === undefined) {
-                // pick the position that moves the king closest to the center of the board
-                // 01234567
-                // 01233210
-                // 32100123
-                let adfc = abk.position.distanceFromCenter();
-                let bdfc = bbk.position.distanceFromCenter();
-                return adfc - bdfc;
-            }
-            if (ae === undefined) return -1;
-            if (be === undefined) return 1;
-            return ae - be; // just sort by the best score
-        });
-
-        return new Map(sortingArray.map(v => [v[0], v[1].nextState]));
+        //let now = Date.now();
+        let result = [...this.getNextStates()].sort((a,b) => a[1].getScore() - b[1].getScore());
+        State.nextMovesCache.set(this.toString(), {sorted: true, nextMoves: result.map(el => el[0])});
+        //State.getNextStatesSortedBlackTime += Date.now() - now;
+        return new Map(result);
     }
 
     clone() {
@@ -360,10 +375,10 @@ export class State {
                 }
                 // If the current player is NOT in check and can't move, draw
                 else this.evaluation = 0;
-            } else if ([...this.getNextStates().values()].some(newState => newState.pieces.filter(p => p instanceof King && p.player === this.activePlayer).length === 0)) {
+            } else if ([...this.getNextStates().values()].some(newState => newState.getInactiveKing() === undefined)) {
             // if any next states have my king being captured, this state is illegal, we'll call it a loss
                 this.evaluation = this.activePlayer===0?-1:1;
-            } else if (this.pieces.filter(p => !(p instanceof King)).length === 0) this.evaluation = -1;
+            } else if (this.getWhiteRook() === undefined) this.evaluation = -1;
             // If both sides have only a king, it's a draw
 
             this.evaluated = true;
@@ -377,12 +392,24 @@ export class State {
     }
 
     toString() {
-        //return `${this.activePlayer===0?'W':'B'}:${this.pieces.sort(Piece.Sort).map(p => p.toString()).join('/')}`;
-        return `${this.activePlayer===0?'W':'B'}:${
-            [this.pieces.find(p => p instanceof King && p.player===0),
-             this.pieces.find(p => p instanceof Rook),
-             this.pieces.find(p => p instanceof King && p.player===1)
-            ].map(p => p?p.position.toString():'  ').join('')}`;
+        if (!this.id) {
+            //return `${this.activePlayer===0?'W':'B'}:${this.pieces.sort(Piece.Sort).map(p => p.toString()).join('/')}`;
+            this.id = `${this.activePlayer===0?'W':'B'}:${
+                [this.getWhiteKing(),
+                 this.getWhiteRook(),
+                 this.getBlackKing()
+                ].map(p => p?p.position.toString():'  ').join('')}`;
+        }
+        return this.id;
+    }
+
+    static fromKey(key: string): State {
+        let state = new State();
+        state.addPiece(new King(0, Position.fromString(key.substring(2, 4))));
+        state.addPiece(new Rook(0, Position.fromString(key.substring(4, 6))));
+        state.addPiece(new King(1, Position.fromString(key.substring(6, 8))));
+        state.activePlayer = key.charAt(0) === 'W'?0:1;
+        return state;
     }
 
     toFEN(): string {
@@ -430,6 +457,7 @@ export type MinimaxResult = {
     depth?: number|undefined; // how far deep have we evaluated
     moves?: string[]; // moves to get to the specified evaluation, or empty array for undefined evaluation
     move?: string;
+    unknownMoves?: Map<string, Set<string>>;
 }
 
 export class Engine {
@@ -439,13 +467,6 @@ export class Engine {
 
     constructor(public maxDepth: number, public disableDebugging=false) {}
 
-    // need to clarify what an undefined evaluation means.
-    // undefined means we don't know the result after "depth" moves.
-    // so undefined/0 should mean we don't know the result RIGHT HERE
-    // undefined/5 means "we've looked 5 moves into the full posibility tree and still can't find a definite result"
-    // so, is undefined/0 preferred to 1/3?  No.  It might be, but we need to extend them out to the same depth first!
-    // then we can confidently say that undefined/3 is WORSE than 1/3
-
     isPreferredForWhite(a: MinimaxResult, b: MinimaxResult): boolean {
         return this.isPreferredForPlayer(a, b, 1);
     }
@@ -454,22 +475,9 @@ export class Engine {
     }
 
     isPreferredForPlayer(a: MinimaxResult, b: MinimaxResult, optimalEvaluation: number): boolean {
-        //         b.eval:       1         undefined         0          -1
-        // a.evaluation:
-        //  1                 closer         true          true         true  (a=1 means we KNOW we will win in ad moves.  It's better than undefined/0/-1, As long as that's < bd, we're good!)
-        //  undefined         false          false         true         true (we always pick unknown if the alternative is draw or losing)
-        //  0                 false          false        further       true (draw games, better than losing! or at least further away)
-        //  -1                false          false         false       further (losing sucks, so it's always worse, unless it's further away)
         if (a.evaluation === optimalEvaluation) return b.evaluation !== optimalEvaluation || a.depth < b.depth; // winning and closer or b is not winning
-        // see, this is tough - a=undefined means we won't lose or draw after depth moves we know.  But if we draw at move 5 and lose at move 6, was it better that we picked a?
-        // i.e., is undefined/6 better than 0/5?
-        // I think undefined/5 is ALWAYS better than -1/5. This means the game is still going after 5 moves.
-        // But draw is a different case.
-        // I'm going to say it's better to keep the evaluation undefined for equal or longer than it is to draw or lose
-        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && a.depth >= b.depth;
-        //return b.evaluation === undefined && (optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth >= b.depth)); // put off the draw/loss as long as possible
+        if (a.evaluation === undefined) return b.evaluation !== optimalEvaluation && a.depth >= b.depth; // put off the draw/loss as long as possible
         if (a.evaluation === 0) return b.evaluation === -1*optimalEvaluation;
-        // put off the loss as long as possible if we can't win or draw
         return optimalEvaluation*a.evaluation > optimalEvaluation*b.evaluation || (a.evaluation === b.evaluation && a.depth > b.depth); // put off the draw/loss as long as possible
     }
 
@@ -480,8 +488,8 @@ export class Engine {
             throw new Error(`Way too deep! ${currentDepth}/${alpha?.depth}/${beta?.depth}`);
         }
 
-        let debug = true; //currentDepth<=2;
-        let recordMoves = true || debug;
+        let debug = false; // currentDepth<=2;
+        let recordMoves = false || debug;
         if (this.disableDebugging) {
             debug = false;
             recordMoves = false;
@@ -500,7 +508,6 @@ export class Engine {
                 if (result.moves) result.moves = result.moves.slice(0, result.depth);
             }
         } else {
-            if (this.positionMinimax.has(positionKey)) this.deepenCount++;
             result.evaluation = state.evaluate();
             if (debug) {
                 console.error(`${buffer}{`);
@@ -514,7 +521,7 @@ export class Engine {
                     let max: MinimaxResult;
                     let nextStates = state.getNextStatesSortedWhite();
                     nextStates.forEach(state => this.positionDepth.set(state.toString(), currentDepth+1));
-                    if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...nextStates].map(([move]) => move)}",`);
+                    if (debug) console.error(`${buffer}  player: "WHITE", nextMoves: "${[...nextStates].map(([move, state]) => move.toString()+'-'+state.getScore().toFixed(1))}",`);
                     for (let [nextMove, nextState] of [...nextStates]) {
                         let nextPositionKey = nextState.toString();
                         if (this.positionDepth.get(nextPositionKey) < currentDepth+1) continue;
@@ -536,11 +543,13 @@ export class Engine {
                                 else if (max.evaluation === 1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${max.depth}",`;
                                 else if (nsr.depth+1 >= max.depth) line += ` status: "deeperThanMax",`;
                             }
+                            nsr = {...nsr};
                             if (nsr.depth+1 > remainingDepth) {
                                 if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                                continue;
+                                nsr.evaluation = undefined;
+                                nsr.depth = remainingDepth - 1;
+                                if (nsr.moves) nsr.moves = nsr.moves.slice(0, nsr.depth);
                             }
-                            nsr = {...nsr};
                             nsr.depth++;
                             nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
@@ -583,11 +592,13 @@ export class Engine {
                                 else if (min.evaluation === -1) line += ` status: "noQuickerWinPossible: ${nsr.depth+1} vs ${min.depth}",`;
                                 else if (nsr.depth+1 >= min.depth) line += ` status: "deeperThanMin",`;
                             }
+                            nsr = {...nsr};
                             if (nsr.depth+1 > remainingDepth) {
                                 if (debug) console.error(`${line} depth: ${nsr.depth+1}, skipReason: "too deep" }, `);
-                                continue;
+                                nsr.evaluation = undefined;
+                                nsr.depth = remainingDepth - 1;
+                                if (nsr.moves) nsr.moves = nsr.moves.slice(0, nsr.depth);
                             }
-                            nsr = {...nsr};
                             nsr.depth++;
                             nsr.move = nextMove;
                             if (recordMoves) nsr.moves = [nextMove, ...nsr.moves];
@@ -611,6 +622,17 @@ export class Engine {
                 console.error(`${buffer}  evaluation: "${result.evaluation}", depth: "${result.depth}", moves: "${result.moves}"`);
                 console.error(`${buffer}}`);
             }
+            if (cached) {
+                this.deepenCount++;
+                /*
+                let reprocessArr = this.reprocess.get(positionKey);
+                if (!reprocessArr) {
+                    reprocessArr = [];
+                    this.reprocess.set(positionKey, reprocessArr);
+                }
+                reprocessArr.push({newDepth: remainingDepth, newResult: result, originalDepth: cached.depth, originalResult: cached});
+                */
+            }
             this.positionMinimax.set(positionKey, result);
         }
         return result;
@@ -620,7 +642,7 @@ export class Engine {
 export class Rook extends Piece {
     letter = 'R';
     value = 5;
-    validMoves(state: State) { 
+    potentialMoves(state: State) { 
         let positions: Position[] = [];
         let fileNum = this.position.getFile();
         [1, -1, 8, -8].forEach(delta => {
@@ -629,7 +651,7 @@ export class Rook extends Piece {
             while (p >= 0 && p <= 63 && (skipFileCheck || (p>>3) === fileNum)) {
                 let newPosition = new Position(p);
                 let pieceThere = state.getPieceAtPosition(newPosition);
-                if (!pieceThere || pieceThere.player !== this.player) positions.push(newPosition);
+                positions.push(newPosition);
                 if (pieceThere) break;
                 p += delta;
             }
@@ -641,16 +663,12 @@ export class Rook extends Piece {
 export class King extends Piece {
     letter = 'K';
     value = 900;
-    validMoves(state: State) {
-        //console.error(`Asking ${this} for valid moves based on ${state}`);
+    potentialMoves(state: State) {
+        let posRank = this.position.getRank();
         return [-9, -8, -7, -1, 1, 7, 8, 9]
-        .filter(delta => !(this.position.getRank() === 0 && (delta===-9||delta===-1||delta===7)) && !(this.position.getRank() === 7 && (delta===-7||delta===1||delta===9)))
+        .filter(delta => !(posRank === 0 && (delta===-9||delta===-1||delta===7)) && !(posRank === 7 && (delta===-7||delta===1||delta===9)))
         .map(delta => this.position.pos + delta)
         .filter(pos => pos >= 0 && pos <= 63)
-        .map(pos => new Position(pos))
-        .filter(newPosition => {
-            let pieceThere = state.getPieceAtPosition(newPosition);
-            return (!pieceThere || pieceThere.player !== this.player);
-        });
+        .map(pos => new Position(pos));
     }
 }

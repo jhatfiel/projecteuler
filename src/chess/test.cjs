@@ -64,6 +64,7 @@ class StockfishWrapper {
 
 async function testPosition(caseName, krkStr, solutionDepth, depth = 13) {
     if (depth < solutionDepth) return;
+    State.nextMovesCache = new Map();
     let STATE = new State();
     let krkArr = krkStr.split(' ');
     let arr = krkArr.map(s => Position.fromString(s));
