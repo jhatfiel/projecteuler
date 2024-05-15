@@ -99,6 +99,8 @@ export class AppComponent implements AfterViewInit {
         {label: 'Other', items: [
             {label: 'Spot-It!: Combination finder', routerLink: 'spotIt/a'},
             {label: 'PI day puzzle (/u/IvanR3D)', routerLink: 'ivanPi/a'},
+            {label: 'Chess (CodinGame)', routerLink: 'chess/a'},
+            {label: 'Code VS Zombies (CodinGame)', routerLink: 'cvz/a'},
         ]},
     ];
 
