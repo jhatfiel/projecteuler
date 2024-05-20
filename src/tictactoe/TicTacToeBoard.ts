@@ -69,6 +69,11 @@ export class TicTacToeBoard implements Board<Play, number> {
     }
 
     printState(state: number) {
+        console.error(this.stateToString(state).join('\n'));
+    }
+
+    stateToString(state: number): string[] {
+        let result: string[] = [];
         let line = '';
         let p1 = this.getPlayerHash(1, state);
         let p2 = this.getPlayerHash(2, state);
@@ -77,12 +82,13 @@ export class TicTacToeBoard implements Board<Play, number> {
             else if (p2 & 1<<i) line += 'O';
             else line += '.';
             if ((i+1) % 3 === 0) {
-                console.error(line);
+                result.push(line);
                 line = '';
             }
         }
-        console.error(`Current Player: ${this.currentPlayer(state)}`);
-        console.error(`Winner? ${this.winner([state])}`);
+        result.push(`Current Player: ${this.currentPlayer(state)}`);
+        result.push(`Winner? ${this.winner([state])}`);
+        return result;
     }
 
     playToOutput(play: Play): string {

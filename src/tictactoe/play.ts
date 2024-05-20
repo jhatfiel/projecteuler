@@ -1,6 +1,5 @@
-import { getSystemErrorMap } from "util";
-import { MonteCarlo } from "./MonteCarloTreeSearch";
-import { Play, TicTacToeBoard } from "./TicTacToeBoard";
+import { MonteCarlo } from "./MonteCarloTreeSearch.js";
+import { Play, TicTacToeBoard } from "./TicTacToeBoard.js";
 import inquirer from 'inquirer';
 import Rx from 'rxjs';
 
@@ -23,7 +22,6 @@ class Game {
             error: (error) => { console.error(`Error! ${error}`); },
             complete: () => { console.log(`Goodbye... Thanks for playing!`); }
         });
-
     }
 
     play() {
@@ -85,9 +83,11 @@ class Game {
 
     makeMove() {
         let play = this.AI.getPlay();
-        this.AI.printStats();
-        console.log(`AI says to play: ${play.square} (${this.BOARD.playToOutput(play)})`);
+        //this.AI.printStats();
         this.STATE = this.BOARD.nextState(this.STATE, play);
+        let wins = this.AI.wins[this.aiNum].get(this.STATE);
+        let plays = this.AI.plays[this.aiNum].get(this.STATE);
+        console.log(`AI says to play: ${play.square} (${this.BOARD.playToOutput(play)}) (Win confidence: ${(100*wins/plays).toFixed(2)}%)`);
         this.AI.update(this.STATE);
         this.checkDone();
     }
