@@ -51,7 +51,7 @@ const BoardRenderer = ({gameState}) => {
     // rowNum and colNum logic here just enables iteration over the positions of the board
     // silly reduce function seems to be the required way to join react components together with a separator
     return (
-            <Box flexDirection="column" width={13} borderStyle="round">
+            <Box flexDirection="column" height={7} width={13} borderStyle="round" flexGrow={0}>
             {
                 [...Array(3)].map((_, rowNum) =>
                     <Box flexDirection="row">
