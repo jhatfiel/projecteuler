@@ -78,7 +78,7 @@ const App = () => {
     let [mode, setMode] = useState(0);
     let [playerWins, setPlayerWins] = useState(0);
     let [aiWins, setAiWins] = useState(0);
-    const addText = (msg) => { text = `${text}\n${msg}`; setText(text); }
+    const addText = (msg) => { text = `${text}${text?'\n':''}${msg}`; setText(text); }
     const {exit} = useApp();
 
     useEffect(() => {
@@ -155,7 +155,7 @@ const App = () => {
         // ai thinks about a play
         AI.stats = [];
         let play = AI.getPlay();
-        addText(AI.stats[0]);
+        if (AI.stats) addText(AI.stats[0]);
 
         let legal = BOARD.legalPlays([gameState.state]);
         let playStates = legal.map(play => ({play, nextState: BOARD.nextState(gameState.state, play)}));

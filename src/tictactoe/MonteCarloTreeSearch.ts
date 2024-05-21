@@ -85,7 +85,10 @@ export class MonteCarlo<PlayType, StateType=number> {
                 // pick the play that has historically given the best outcome, while at the same time NOT picking something that we KNOW will lose
                 let highestPercentage = -Infinity;
                 bestPlay = choice(playStates).play; // if all states are losing, we wouldn't end up picking a state here
-                playStates.filter(ps => !this.winsIn[3-player].has(ps.nextState)).forEach(({play, nextState}) => {
+                playStates
+                    .filter(ps => !this.winsIn[3-player].has(ps.nextState)) // don't pick a state that is losing
+                    .filter(ps => !this.board.legalPlays([ps.nextState]).some(play => this.winsIn[3-player].has(this.board.nextState(ps.nextState, play)))) // don't pick a state where the opponent can pick a winning state
+                    .forEach(({play, nextState}) => {
                     let plays = this.plays[player].get(nextState) ?? 1;
                     let wins = this.wins[player].get(nextState) ?? 0;
                     let p = wins/plays;
