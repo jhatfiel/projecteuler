@@ -5,6 +5,17 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Run React",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "runtimeArgs": [
+        "--experimental-specifier-resolution=node",
+        "--enable-source-maps=node",
+      ],
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Launch TS",
       "program": "./dist/out-tsc/puzzleRunner.js",
       "runtimeArgs": [

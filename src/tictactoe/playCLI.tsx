@@ -67,7 +67,7 @@ const BoardRenderer = ({gameState}) => {
 };
 
 const BOARD = new TicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD, {msFirst: 2000, msNormal: 500});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10, msNormal: 5});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
@@ -83,10 +83,11 @@ const App = () => {
 
     useEffect(() => {
         addText(`Initializing AI...`);
+        let now = Date.now();
         AI.update(gameState.state);
         setTimeout(() => {
             AI.getPlay(); // initialize the engine
-            addText(`...DONE`);
+            addText(`...DONE ${Date.now()-now}ms`);
 
             // prompt for player choice (play first-x, play second-o, random start)
             mode=0; setMode(mode);
@@ -106,11 +107,20 @@ const App = () => {
         prepareForNextTurn();
     };
 
+    const selectValidSquare = () => {
+        while (BOARD.legalPlays([gameState.state]).find(s => s.player === playerNum && s.square === gameState.selected) === undefined) {
+            gameState.selected++;
+            gameState.selected = gameState.selected%9;
+            setGameState(gameState);
+        }
+    }
+
     const prepareForNextTurn = () => {
         setGameState(gameState);
         AI.update(gameState.state);
         const winner = BOARD.winner([gameState.state]);
         if (winner) {
+            gameState.selected = -1;
             let gameMessage = `Game Over!  `;
             if (winner === -1) gameMessage += `DRAW`;
             else if (winner === playerNum) { playerWins++; setPlayerWins(playerWins); gameMessage += `No way!!!  You won!`; }
@@ -120,7 +130,11 @@ const App = () => {
             setGameMessage(gameMessage);
             mode=0; setMode(mode);
         } else {
-            if (BOARD.currentPlayer(gameState.state) === playerNum) { addText(`Waiting for player...`); } // wait for human play
+            if (BOARD.currentPlayer(gameState.state) === playerNum) {
+                // don't select an occupied square
+                selectValidSquare();
+                addText(`Waiting for player...`);
+            } // wait for human play
             else aiPlay();
         }
     }
@@ -139,7 +153,9 @@ const App = () => {
 
     const aiPlay = () => {
         // ai thinks about a play
+        AI.stats = [];
         let play = AI.getPlay();
+        addText(AI.stats[0]);
 
         let legal = BOARD.legalPlays([gameState.state]);
         let playStates = legal.map(play => ({play, nextState: BOARD.nextState(gameState.state, play)}));
@@ -153,7 +169,7 @@ const App = () => {
             if (AI.explored.has(nextState)) exploredStr = ' E';
             if (AI.winsIn[aiNum].has(nextState)) winsInStr = ` W${AI.winsIn[aiNum].get(nextState)}`;
             if (AI.winsIn[playerNum].has(nextState)) losesInStr = ` L${AI.winsIn[playerNum].get(nextState)}`;
-            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextState)} / ${AI.plays[aiNum].get(nextState)}})${exploredStr}${winsInStr}${losesInStr}`);
+            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextState)} / ${AI.plays[aiNum].get(nextState)})${exploredStr}${winsInStr}${losesInStr}`);
         });
 
         // make the ai play
@@ -208,13 +224,16 @@ const App = () => {
         let nextState: number;
         if (BOARD.legalPlays([gameState.state]).filter(play => play.player === playerNum && play.square === gameState.selected).length) {
             nextState = BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected});
-            if (AI.explored.has(nextState)) {
-                hintMessage = `EXPLORED`;
-                if (AI.winsIn[playerNum].has(nextState)) hintMessage += ` wins in ${AI.winsIn[playerNum].get(nextState)}`;
-                else if (AI.winsIn[aiNum].has(nextState)) hintMessage += ` loses in ${AI.winsIn[aiNum].get(nextState)}`;
-                else { hintMessage += ' DRAW'; };
-            }
-
+            let plays = AI.plays[playerNum].get(nextState) ?? 1;
+            let wins = AI.wins[playerNum].get(nextState) ?? 0;
+            let p = wins/plays;
+            let exploredStr = '';
+            let winsInStr = '';
+            let losesInStr = '';
+            if (AI.explored.has(nextState)) exploredStr = ' E';
+            if (AI.winsIn[playerNum].has(nextState)) winsInStr = ` W${AI.winsIn[playerNum].get(nextState)}`;
+            if (AI.winsIn[aiNum].has(nextState)) losesInStr = ` L${AI.winsIn[aiNum].get(nextState)}`;
+            hintMessage = `${(100*p).toFixed(2)}% (${AI.wins[playerNum].get(nextState)} / ${AI.plays[playerNum].get(nextState)})${exploredStr}${winsInStr}${losesInStr}`;
         } else {
             hintMessage = `OCCUPIED`;
         }
@@ -227,7 +246,7 @@ const App = () => {
             {/* mode=0, choose player box visible */}
             <Box flexDirection='column' flexGrow={1} display={mode===0?'flex':'none'}>
                 <Text>{gameMessage}</Text>
-                <SelectInput items={choices} onSelect={onChoosePlayer}/>
+                <SelectInput items={choices} onSelect={onChoosePlayer} isFocused={mode===0}/>
             </Box>
             {/* mode=1, game status box visible */}
             <Box flexDirection='column' flexGrow={1} display={mode===1?'flex':'none'}>
