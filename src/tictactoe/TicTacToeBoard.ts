@@ -93,6 +93,11 @@ export class TicTacToeBoard implements Board<Play, number> {
     // 1 2 4
     // 8 16 32
     // 64 128 256
+
+    // mirror
+    // 012 036
+    // 345 147
+    // 678 258
     mirrorState(state: number): number {
         let newState = state & (1<<18);
         for (let p of [0,1]) {
@@ -104,6 +109,11 @@ export class TicTacToeBoard implements Board<Play, number> {
         }
         return newState;
     }
+
+    // rotate
+    // 012 630
+    // 345 741
+    // 678 852
     rotateState(state: number): number {
         let newState = state & (1<<18);
         for (let p of [0,1]) {
