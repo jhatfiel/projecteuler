@@ -87,7 +87,7 @@ const App = () => {
         AI.update(gameState.state);
         setTimeout(() => {
             AI.getPlay(); // initialize the engine
-            addText(`...DONE ${Date.now()-now}ms`);
+            addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} states`);
 
             // prompt for player choice (play first-x, play second-o, random start)
             mode=0; setMode(mode);
@@ -157,29 +157,28 @@ const App = () => {
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        let legal = BOARD.legalPlays([gameState.state]);
-        let playStates = legal.map(play => ({play, nextState: BOARD.nextState(gameState.state, play)}));
-        playStates.forEach(({play, nextState}) => {
-            let plays = AI.plays[aiNum].get(nextState) ?? 1;
-            let wins = AI.wins[aiNum].get(nextState) ?? 0;
+        BOARD.legalPlayStates([gameState.state]).playStates.forEach(({play, nextStateNormalized}) => {
+            let plays = AI.plays[aiNum].get(nextStateNormalized) ?? 1;
+            let wins = AI.wins[aiNum].get(nextStateNormalized) ?? 0;
             let p = wins/plays;
             let exploredStr = '';
             let winsInStr = '';
             let losesInStr = '';
-            if (AI.explored.has(nextState)) exploredStr = ' E';
-            if (AI.winsIn[aiNum].has(nextState)) winsInStr = ` W${AI.winsIn[aiNum].get(nextState)}`;
-            if (AI.winsIn[playerNum].has(nextState)) losesInStr = ` L${AI.winsIn[playerNum].get(nextState)}`;
-            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextState)} / ${AI.plays[aiNum].get(nextState)})${exploredStr}${winsInStr}${losesInStr}`);
+            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
+            if (AI.winsIn[aiNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[aiNum].get(nextStateNormalized)}`;
+            if (AI.winsIn[playerNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[playerNum].get(nextStateNormalized)}`;
+            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextStateNormalized)} / ${AI.plays[aiNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`);
         });
 
         // make the ai play
         let nextState = BOARD.nextState(gameState.state, play);
+        let nextStateNormalized = BOARD.normalize(nextState);
 
-        let wins = AI.wins[aiNum].get(nextState);
-        let plays = AI.plays[aiNum].get(nextState);
-        let explored = AI.explored.has(nextState);
-        let winsIn = AI.winsIn[aiNum].get(nextState);
-        let losesIn = AI.winsIn[playerNum].get(nextState);
+        let wins = AI.wins[aiNum].get(nextStateNormalized);
+        let plays = AI.plays[aiNum].get(nextStateNormalized);
+        let explored = AI.explored.has(nextStateNormalized);
+        let winsIn = AI.winsIn[aiNum].get(nextStateNormalized);
+        let losesIn = AI.winsIn[playerNum].get(nextStateNormalized);
         addText(`AI says to play: ${play.square} (${BOARD.playToOutput(play)}) (Win confidence: ${wins}/${plays} = ${(100*wins/plays).toFixed(2)}%) explored=${explored}, winsIn=${winsIn}, losesIn=${losesIn}`);
         gameState.state = nextState;
         prepareForNextTurn();
@@ -221,19 +220,18 @@ const App = () => {
 
     let hintMessage = 'UNKNOWN';
     if (gameState) {
-        let nextState: number;
         if (BOARD.legalPlays([gameState.state]).filter(play => play.player === playerNum && play.square === gameState.selected).length) {
-            nextState = BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected});
-            let plays = AI.plays[playerNum].get(nextState) ?? 1;
-            let wins = AI.wins[playerNum].get(nextState) ?? 0;
+            let nextStateNormalized = BOARD.normalize(BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected}));
+            let plays = AI.plays[playerNum].get(nextStateNormalized) ?? 1;
+            let wins = AI.wins[playerNum].get(nextStateNormalized) ?? 0;
             let p = wins/plays;
             let exploredStr = '';
             let winsInStr = '';
             let losesInStr = '';
-            if (AI.explored.has(nextState)) exploredStr = ' E';
-            if (AI.winsIn[playerNum].has(nextState)) winsInStr = ` W${AI.winsIn[playerNum].get(nextState)}`;
-            if (AI.winsIn[aiNum].has(nextState)) losesInStr = ` L${AI.winsIn[aiNum].get(nextState)}`;
-            hintMessage = `${(100*p).toFixed(2)}% (${AI.wins[playerNum].get(nextState)} / ${AI.plays[playerNum].get(nextState)})${exploredStr}${winsInStr}${losesInStr}`;
+            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
+            if (AI.winsIn[playerNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[playerNum].get(nextStateNormalized)}`;
+            if (AI.winsIn[aiNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[aiNum].get(nextStateNormalized)}`;
+            hintMessage = `${(100*p).toFixed(2)}% (${AI.wins[playerNum].get(nextStateNormalized)} / ${AI.plays[playerNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`;
         } else {
             hintMessage = `OCCUPIED`;
         }

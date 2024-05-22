@@ -1,4 +1,4 @@
-import { Board } from './Board';
+import { Board, PlayState } from './Board';
 
 export type Play = { player: number; square: number; }
 
@@ -34,6 +34,18 @@ export class TicTacToeBoard implements Board<Play, number> {
         return result;
     }
 
+    legalPlayStates(stateHistory: number[]): {legal: Play[], playStates: PlayState<Play, number>[]} {
+        let lastState = stateHistory.at(-1);
+        let legal = this.legalPlays(stateHistory);
+        return {legal,
+                playStates: legal.map(play => {
+                    let nextState = this.nextState(lastState, play);
+                    let nextStateNormalized = this.normalize(nextState);
+                    return {play, nextState, nextStateNormalized};
+                })
+        };
+    }
+
     nextState(state: number, play: Play): number {
         let die = (message: string) => {
             this.printState(state);
@@ -66,6 +78,42 @@ export class TicTacToeBoard implements Board<Play, number> {
         }
         if ((board ^ this.FULL_BOARD) === 0) return -1;
         return 0;
+    }
+
+    // normalize a state so that the MCTS doesn't have to store rotated/reflected copies of each state
+    normalize(state: number): number {
+        let states: number[] = [state, this.mirrorState(state)];
+        for (let i=0; i<3; i++) {
+            state = this.rotateState(state);
+            states.push(state, this.mirrorState(state));
+        }
+        return states.reduce((min, s) => Math.min(min, s), Infinity);
+    }
+
+    // 1 2 4
+    // 8 16 32
+    // 64 128 256
+    mirrorState(state: number): number {
+        let newState = state & (1<<18);
+        for (let p of [0,1]) {
+            let h = this.getPlayerHash(p+1, state);
+            h = (h & 1)    | ((h&8)>>2)  | ((h&64)>>4)  |
+                ((h&2)<<2) | (h&16)      | ((h&128)>>2) |
+                ((h&4)<<4) | ((h&32)<<2) | (h&256);
+            newState = newState | (h << (9*p));
+        }
+        return newState;
+    }
+    rotateState(state: number): number {
+        let newState = state & (1<<18);
+        for (let p of [0,1]) {
+            let h = this.getPlayerHash(p+1, state);
+            h = ((h&64)>>6)  | ((h&8)>>2)  | ((h&1)<<2) |
+                ((h&128)>>4) | (h&16)      | ((h&2)<<4) |
+                ((h&256)>>2) | ((h&32)<<2) | ((h&4)<<6);
+            newState = newState | (h << (9*p));
+        }
+        return newState;
     }
 
     printState(state: number) {
