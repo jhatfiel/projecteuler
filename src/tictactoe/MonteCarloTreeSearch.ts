@@ -197,9 +197,9 @@ export class MonteCarlo<PlayType, StateType=number> {
                 else if (this.winsIn[3-player].has(stateNormalized)) winner = 3-player;
                 else winner = -1;
             } else {
-                if (unexploredStates.map(ps => ps.nextStateNormalized).every(ns => this.plays[player].has(ns))) {
+                if (unexploredStates.every(ps => this.plays[player].has(ps.nextStateNormalized))) {
                     // we have stats on all of the unexplored plays here, use them
-                    const logTotal = Math.log(unexploredStates.map(ps => ps.nextStateNormalized).map(ns => this.plays[player].get(ns)).reduce((total, cnt) => total+=cnt, 0));
+                    const logTotal = Math.log(unexploredStates.map(ps => this.plays[player].get(ps.nextStateNormalized)).reduce((total, cnt) => total+=cnt, 0));
 
                     let best = -Infinity;
                     unexploredStates.forEach(({nextStateNormalized: ns}) => {
@@ -214,6 +214,8 @@ export class MonteCarlo<PlayType, StateType=number> {
                     stateNormalized = this.board.normalize(state);
                 } else {
                     // if we haven't tried every play at least once yet, just choose randomly
+                    // should we limit the search to the unexplored states or all states? This encourages filling out the tree faster, but that may not be desirable
+                    //({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates.filter(ps => !this.plays[player].has(ps.nextStateNormalized))));
                     ({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates));
                 }
                 statesCopy.push(state);
