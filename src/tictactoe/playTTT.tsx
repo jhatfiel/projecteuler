@@ -17,8 +17,9 @@ const Square = ({gameState, rowNum, colNum}) => {
     // highlight the currently selected square
     const hl = square => {
         const squareSelected = square===gameState.selected;
-        return {inverse: squareSelected};
+        let style = {inverse: squareSelected};
         //return {backgroundColor: squareSelected?'gray':'black', bold: squareSelected};
+        return style;
     };
 
     return (
@@ -27,27 +28,6 @@ const Square = ({gameState, rowNum, colNum}) => {
 }
 
 const BoardRenderer = ({gameState}) => {
-    /*
-    return (
-        <>
-            <Text> State: {gameState.state.toString(2).padStart(19, '0')} </Text>
-            <Text> Selected: {gameState.selected} </Text>
-                <Box width={7} flexWrap="wrap">
-                {
-                [...Array(9)].map((_, squareNum) =>
-                    <Box key={`square${squareNum}`} borderStyle={{
-                        topLeft: ' ',
-                        top: squareNum>2?'-':' ',
-                        topRight: ' ',
-                        left: (squareNum%3)?'|':' ',
-                        bottomLeft: ' ',
-                        right: 'L'
-                    }} borderTop={squareNum>2} borderBottom={false} borderRight={false}><Text {...hl(squareNum)}>{at(squareNum)}</Text></Box>)
-                }
-                </Box>
-        </>
-    );*/
-
     // rowNum and colNum logic here just enables iteration over the positions of the board
     // silly reduce function seems to be the required way to join react components together with a separator
     return (
@@ -67,7 +47,7 @@ const BoardRenderer = ({gameState}) => {
 };
 
 const BOARD = new TicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10, msNormal: 5});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10, msNormal: 10})//, {msFirst: 10, msNormal: 5});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
@@ -80,26 +60,22 @@ const App = () => {
     let [aiWins, setAiWins] = useState(0);
     const addText = (msg) => { text = `${text}${text?'\n':''}${msg}`; setText(text); }
     const {exit} = useApp();
+    const legalPlays = BOARD.legalPlays([gameState.state]);
 
     useEffect(() => {
         addText(`Initializing AI...`);
-        let now = Date.now();
-        AI.update(gameState.state);
         setTimeout(() => {
-            AI.stats = [];
-            AI.getPlay(); // initialize the engine
-            addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
-            addText(AI.stats[0]);
-
-            // prompt for player choice (play first-x, play second-o, random start)
-            mode=0; setMode(mode);
-
             startGame();
         }, 1);
     }, []);
 
     const startGame = () => {
+        let now = Date.now();
         AI.replay();
+        AI.stats = [];
+        AI.getPlay(); // initialize the engine
+        addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
+        addText(AI.stats[0]);
 
         // initialize game state
         gameState.state = 0;
@@ -110,9 +86,16 @@ const App = () => {
     };
 
     const selectValidSquare = () => {
-        while (BOARD.legalPlays([gameState.state]).find(s => s.player === playerNum && s.square === gameState.selected) === undefined) {
-            gameState.selected++;
-            gameState.selected = gameState.selected%9;
+        let cnt = 0;
+        let selected = gameState.selected;
+        while (legalPlays.find(s => s.player === playerNum && s.square === selected) === undefined && cnt < 10) {
+            selected++;
+            selected %= 9;
+            cnt++;
+        }
+        if (cnt === 10) gameState.selected = -1;
+        else if (gameState.selected !== selected) {
+            gameState.selected = selected;
             setGameState(gameState);
         }
     }
@@ -133,8 +116,6 @@ const App = () => {
             mode=0; setMode(mode);
         } else {
             if (BOARD.currentPlayer(gameState.state) === playerNum) {
-                // don't select an occupied square
-                selectValidSquare();
                 addText(`Waiting for player...`);
             } // wait for human play
             else aiPlay();
@@ -143,7 +124,7 @@ const App = () => {
 
     // human makes a play
     const humanPlay = (square: number) => {
-        if (BOARD.legalPlays([gameState.state]).find(s => s.player === playerNum && s.square === square) === undefined) {
+        if (legalPlays.find(s => s.player === playerNum && s.square === square) === undefined) {
             addText(`Invalid square, try again`);
             return;
         }
@@ -186,13 +167,45 @@ const App = () => {
         prepareForNextTurn();
     };
 
+    const movePosition = (rd: number, cd: number) => {
+        const validPairs = legalPlays.map(play => ({row: Math.floor(play.square/3), col: play.square%3}));
+        let pos = {row: Math.floor(gameState.selected/3), col: gameState.selected%3};
+        let found = false;
+
+        while (!found) {
+            if (rd) { // moving rows
+                pos.row = (pos.row+rd+3)%3;
+                if (validPairs.find(p => p.row === pos.row && p.col === pos.col)) found = true;
+                else {
+                    // try the other 2 possible cells in this row
+                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col+rd)) { found = true; pos.col += rd; }
+                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col-rd)) { found = true; pos.col -= rd; }
+                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col+2*rd)) { found = true; pos.col += 2*rd; }
+                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col-2*rd)) { found = true; pos.col -= 2*rd; }
+                }
+            } else { // moving cols
+                pos.col = (pos.col+cd+3)%3;
+                if (validPairs.find(p => p.row === pos.row && p.col === pos.col)) found = true;
+                else {
+                    // try the other 2 possible cells in this col
+                    if (validPairs.find(p => p.row === pos.row-cd && p.col === pos.col)) { found = true; pos.row += cd; }
+                    if (validPairs.find(p => p.row === pos.row+cd && p.col === pos.col)) { found = true; pos.row -= cd; }
+                    if (validPairs.find(p => p.row === pos.row-2*cd && p.col === pos.col)) { found = true; pos.row -= 2*cd; }
+                    if (validPairs.find(p => p.row === pos.row+2*cd && p.col === pos.col)) { found = true; pos.row += 2*cd; }
+                }
+            }
+        }
+
+        setGameState({...gameState, selected: pos.row*3 + pos.col});
+    }
+
     useInput((input, key) => {
         // move cursor
         if (mode === 1) {
-            if (key.leftArrow && gameState.selected%3 > 0) setGameState({...gameState, selected: gameState.selected-1});
-            if (key.rightArrow && gameState.selected%3 < 2) setGameState({...gameState, selected: gameState.selected+1});
-            if (key.upArrow && gameState.selected/3 >= 1) setGameState({...gameState, selected: gameState.selected-3});
-            if (key.downArrow && gameState.selected/3 < 2) setGameState({...gameState, selected: gameState.selected+3});
+            if (key.leftArrow) movePosition(0, -1); 
+            if (key.rightArrow) movePosition(0, +1);
+            if (key.upArrow) movePosition(-1, 0);
+            if (key.downArrow) movePosition(+1, 0);
 
             if (input === ' ') {
                 // select square if legal
@@ -222,7 +235,7 @@ const App = () => {
 
     let hintMessage = 'UNKNOWN';
     if (gameState) {
-        if (BOARD.legalPlays([gameState.state]).filter(play => play.player === playerNum && play.square === gameState.selected).length) {
+        if (legalPlays.filter(play => play.player === playerNum && play.square === gameState.selected).length) {
             let nextStateNormalized = BOARD.normalize(BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected}));
             let plays = AI.plays[playerNum].get(nextStateNormalized) ?? 1;
             let wins = AI.wins[playerNum].get(nextStateNormalized) ?? 0;
@@ -237,7 +250,10 @@ const App = () => {
         } else {
             hintMessage = `OCCUPIED`;
         }
-    }
+    };
+
+    // don't select an occupied square
+    selectValidSquare();
 
     return (
         <Box>
@@ -251,8 +267,6 @@ const App = () => {
             {/* mode=1, game status box visible */}
             <Box flexDirection='column' flexGrow={1} display={mode===1?'flex':'none'}>
                 <Text>Game Status</Text>
-                <Text> State: {gameState?.state.toString(2).padStart(19, '0')}</Text>
-                <Text> Selected: {gameState?.selected}</Text>
                 <Text> Player is: { playerNum===1?'X':'O' }</Text>
                 <Text> AI is: { aiNum===1?'X':'O' }</Text>
                 <Text> HINT: { hintMessage }</Text>

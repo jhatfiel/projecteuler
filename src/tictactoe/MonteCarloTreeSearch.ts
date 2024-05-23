@@ -216,6 +216,7 @@ export class MonteCarlo<PlayType, StateType=number> {
                     // if we haven't tried every play at least once yet, just choose randomly
                     // should we limit the search to the unexplored states or all states? This encourages filling out the tree faster, but that may not be desirable
                     //({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates.filter(ps => !this.plays[player].has(ps.nextStateNormalized))));
+                    //({nextState: state, nextStateNormalized: stateNormalized} = choice(playStates));
                     ({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates));
                 }
                 statesCopy.push(state);
