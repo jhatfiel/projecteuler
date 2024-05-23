@@ -86,8 +86,10 @@ const App = () => {
         let now = Date.now();
         AI.update(gameState.state);
         setTimeout(() => {
+            AI.stats = [];
             AI.getPlay(); // initialize the engine
-            addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} states`);
+            addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
+            addText(AI.stats[0]);
 
             // prompt for player choice (play first-x, play second-o, random start)
             mode=0; setMode(mode);
@@ -208,7 +210,7 @@ const App = () => {
     ];
 
     const onChoosePlayer = item => {
-        addText(`chose to be ${item.value}`);
+        text = ''; setText(text);
         playerNum = item.value?item.value:(1+Math.round(Math.random()));
         setPlayerNum(playerNum);
         aiNum = 3-playerNum;
