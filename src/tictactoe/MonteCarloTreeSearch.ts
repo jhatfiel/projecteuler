@@ -1,4 +1,4 @@
-import { Board, PlayState } from "./Board";
+import { Board, BoardState, PlayState } from "./Board";
 function choice<T>(arr: T[]): T {
     return arr[Math.floor(Math.random()*arr.length)];
 }
@@ -8,7 +8,7 @@ function choice<T>(arr: T[]): T {
 // Board<StateType>.normalize(state: StateType): StateType
 // then anywhere we're referencing wins, winsIn, plays, explored, we need to use the normalized version
 
-export class MonteCarlo<PlayType, StateType=number> {
+export class MonteCarlo<PlayType> {
     msFirst = 5000;
     msNormal = 100;
     ms: number;
@@ -17,35 +17,35 @@ export class MonteCarlo<PlayType, StateType=number> {
     C = 1.4; // larger values encourage more exploration, smaller values cause the AI to focus on known good plays
     skipExplored = true;
 
-    states: StateType[] = [];
-    wins: Map<StateType, number>[] = [];
-    winsIn: Map<StateType, number>[] = [];
-    plays: Map<StateType, number>[] = [];
-    explored = new Set<StateType>();
+    states: BoardState[] = [];
+    wins: Map<bigint, number>[] = [];
+    winsIn: Map<bigint, number>[] = [];
+    plays: Map<bigint, number>[] = [];
+    explored = new Set<bigint>();
     maxDepth = 0;
     running = false;
     stats: string[] = [];
 
-    constructor(private board: Board<PlayType, StateType>, params: { msFirst?: number, msNormal?: number, maxPlays?: number, c?: number, C?: number, skipExplored?: boolean } = {}) {
+    constructor(private board: Board<PlayType>, params: { msFirst?: number, msNormal?: number, maxPlays?: number, c?: number, C?: number, skipExplored?: boolean } = {}) {
         if (params['msFirst'] !== undefined) this.msFirst = params.msFirst;
         if (params['msNormal'] !== undefined) this.msNormal = params.msNormal;
         if (params['maxPlays'] !== undefined) this.maxPlays = params.maxPlays;
         if (params['C'] !== undefined) this.C = params.C;
         if (params['skipExplored'] !== undefined) this.skipExplored = params.skipExplored;
         this.ms = this.msFirst;
-        this.wins[1] = new Map<StateType, number>();
-        this.wins[2] = new Map<StateType, number>();
-        this.winsIn[1] = new Map<StateType, number>();
-        this.winsIn[2] = new Map<StateType, number>();
-        this.plays[1] = new Map<StateType, number>();
-        this.plays[2] = new Map<StateType, number>();
+        this.wins[1] = new Map<bigint, number>();
+        this.wins[2] = new Map<bigint, number>();
+        this.winsIn[1] = new Map<bigint, number>();
+        this.winsIn[2] = new Map<bigint, number>();
+        this.plays[1] = new Map<bigint, number>();
+        this.plays[2] = new Map<bigint, number>();
     }
 
     replay() {
         this.states = [];
     }
 
-    update(state: StateType) {
+    update(state: BoardState) {
         this.states.push(state);
     }
 
@@ -55,7 +55,7 @@ export class MonteCarlo<PlayType, StateType=number> {
         let now = Date.now();
         this.maxDepth = 0;
         let state = this.states.at(-1);
-        let stateNormalized = this.board.normalize(state);
+        let stateNormalized = state.normalize();
         let player = this.board.currentPlayer(state);
         let {legal, playStates} = this.board.legalPlayStates(this.states);
 
@@ -125,13 +125,13 @@ export class MonteCarlo<PlayType, StateType=number> {
         this.getStats().forEach(line => console.error(line));
     }
 
-    pickBestCasePlay(stateNormalized: StateType, player: number, playStates: PlayState<PlayType, StateType>[], updateStats=false): PlayState<PlayType, StateType> {
+    pickBestCasePlay(stateNormalized: bigint, player: number, playStates: PlayState<PlayType>[], updateStats=false): PlayState<PlayType> {
         // we have fully explored the child states - there's no point in continuing
         // pick a random "best case" and return
-        let bestCaseWinIn = new Map<number, PlayState<PlayType, StateType>[]>();
-        let bestCaseLoseIn = new Map<number, PlayState<PlayType, StateType>[]>();
+        let bestCaseWinIn = new Map<number, PlayState<PlayType>[]>();
+        let bestCaseLoseIn = new Map<number, PlayState<PlayType>[]>();
         // to be more generic, I guess we should track how far away the draw would be
-        let bestCaseDraw: PlayState<PlayType, StateType>[] = [];
+        let bestCaseDraw: PlayState<PlayType>[] = [];
         playStates.forEach(ps => {
             let winsIn = this.winsIn[player].get(ps.nextStateNormalized);
             let losesIn = this.winsIn[3-player].get(ps.nextStateNormalized);
@@ -145,7 +145,7 @@ export class MonteCarlo<PlayType, StateType=number> {
                 bestCaseDraw.push(ps);
             }
         });
-        let bestArr: PlayState<PlayType, StateType>[] = [];
+        let bestArr: PlayState<PlayType>[] = [];
         if (bestCaseWinIn.size) {
             let fastestWinIn = [...bestCaseWinIn.keys()].reduce((acc, i) => Math.min(acc, i), Infinity);
             if (updateStats) this.winsIn[player].set(stateNormalized, fastestWinIn+1);
@@ -162,16 +162,16 @@ export class MonteCarlo<PlayType, StateType=number> {
     }
 
     runSimluation() {
-        let visitedStates: Set<StateType>[] = [];
+        let visitedStates: Set<bigint>[] = [];
         let statesCopy = this.states.slice();
         let state = statesCopy.at(-1);
-        let stateNormalized = this.board.normalize(state);
+        let stateNormalized = state.normalize();
         let player = this.board.currentPlayer(state);
         let expand = true;
         let winner: number;
 
-        visitedStates[1] = new Set<StateType>();
-        visitedStates[2] = new Set<StateType>();
+        visitedStates[1] = new Set<bigint>();
+        visitedStates[2] = new Set<bigint>();
 
         visitedStates[player].add(stateNormalized);
 
@@ -202,16 +202,16 @@ export class MonteCarlo<PlayType, StateType=number> {
                     const logTotal = Math.log(unexploredStates.map(ps => this.plays[player].get(ps.nextStateNormalized)).reduce((total, cnt) => total+=cnt, 0));
 
                     let best = -Infinity;
-                    unexploredStates.forEach(({nextStateNormalized: ns}) => {
-                        let wins = this.wins[player].get(ns);
-                        let plays = this.plays[player].get(ns);
+                    unexploredStates.forEach(({nextState: ns, nextStateNormalized: nsn}) => {
+                        let wins = this.wins[player].get(nsn);
+                        let plays = this.plays[player].get(nsn);
                         let score = wins/plays + this.C*Math.sqrt(logTotal / plays);
                         if (score > best) {
                             best = score;
                             state = ns;
+                            stateNormalized = nsn;
                         }
                     });
-                    stateNormalized = this.board.normalize(state);
                 } else {
                     // if we haven't tried every play at least once yet, just choose randomly
                     // should we limit the search to the unexplored states or all states? This encourages filling out the tree faster, but that may not be desirable

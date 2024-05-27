@@ -1,5 +1,5 @@
 import { MonteCarlo } from "./MonteCarloTreeSearch";
-import { Play, TicTacToeBoard } from "./TicTacToeBoard";
+import { Play, TicTacToeBoard, TicTacToeBoardState } from "./TicTacToeBoard";
 
 import React, {useState, useEffect} from 'react';
 import {render, useInput, useApp, Text, Box} from 'ink';
@@ -7,23 +7,16 @@ import SelectInput from 'ink-select-input';
 
 const Square = ({gameState, rowNum, colNum}) => {
     // give the character at the specified square
-    const at = square => {
-        let ch = ' ';
-        if ((gameState.state&511) & (1<<square)) ch = 'X';
-        if (((gameState.state>>9)&511) & (1<<square)) ch = 'O';
-        return ch;
-    };
+    const square = rowNum*3 + colNum;
+    let ch = ' ';
+    if (gameState.state.xBoard & 1<<square) ch = 'X';
+    if (gameState.state.oBoard & 1<<square) ch = 'O';
 
     // highlight the currently selected square
-    const hl = square => {
-        const squareSelected = square===gameState.selected;
-        let style = {inverse: squareSelected};
-        //return {backgroundColor: squareSelected?'gray':'black', bold: squareSelected};
-        return style;
-    };
+    const hl = { inverse: gameState.selected === rowNum*3 + colNum };
 
     return (
-            <Text> <Text {...hl(rowNum*3+colNum)}>{at(rowNum*3+colNum)}</Text> </Text>
+            <Text> <Text {...hl}>{ch}</Text> </Text>
     );
 }
 
@@ -47,12 +40,12 @@ const BoardRenderer = ({gameState}) => {
 };
 
 const BOARD = new TicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10, msNormal: 10})//, {msFirst: 10, msNormal: 5});
+const AI = new MonteCarlo<Play>(BOARD);//, {msFirst: 10, msNormal: 10})//, {msFirst: 10, msNormal: 5});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
     let aiNum = 3-playerNum;
-    let [gameState, setGameState] = useState({state: 0, selected: 4});
+    let [gameState, setGameState]: [{state: TicTacToeBoardState, selected: number}, (s: {state: TicTacToeBoardState, selected: number})=>void] = useState({state: BOARD.start(), selected: 4});
     let [gameMessage, setGameMessage] = useState(`Welcome, please select your player (prese q any time to quit)`);
     let [text, setText] = useState('');
     let [mode, setMode] = useState(0);
@@ -73,12 +66,13 @@ const App = () => {
         let now = Date.now();
         AI.replay();
         AI.stats = [];
+        AI.update(BOARD.start());
         AI.getPlay(); // initialize the engine
         addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
         addText(AI.stats[0]);
 
         // initialize game state
-        gameState.state = 0;
+        gameState.state = BOARD.start();
         gameState.selected = 4;
 
         // prepareForNextTurn puts us in the right state for whoever's turn it is
@@ -155,7 +149,7 @@ const App = () => {
 
         // make the ai play
         let nextState = BOARD.nextState(gameState.state, play);
-        let nextStateNormalized = BOARD.normalize(nextState);
+        let nextStateNormalized = nextState.normalize();
 
         let wins = AI.wins[aiNum].get(nextStateNormalized);
         let plays = AI.plays[aiNum].get(nextStateNormalized);
@@ -236,7 +230,7 @@ const App = () => {
     let hintMessage = 'UNKNOWN';
     if (gameState) {
         if (legalPlays.filter(play => play.player === playerNum && play.square === gameState.selected).length) {
-            let nextStateNormalized = BOARD.normalize(BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected}));
+            let nextStateNormalized = BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected}).normalize();
             let plays = AI.plays[playerNum].get(nextStateNormalized) ?? 1;
             let wins = AI.wins[playerNum].get(nextStateNormalized) ?? 0;
             let p = wins/plays;

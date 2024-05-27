@@ -1,16 +1,21 @@
-export type PlayState<PlayType, StateType=number> = {
+export type PlayState<PlayType> = {
     play: PlayType;
-    nextState: StateType;
-    nextStateNormalized: StateType;
+    nextState: BoardState;
+    nextStateHash: bigint;
+    nextStateNormalized: bigint;
 }
 
-export interface Board<PlayType, StateType = number> {
-    start(): StateType;
-    currentPlayer(state: StateType): number;
-    nextPlayer(state: StateType): number;
-    legalPlays(stateHistory: StateType[]): PlayType[];
-    legalPlayStates(stateHistory: StateType[]): {legal: PlayType[], playStates: PlayState<PlayType, StateType>[]};
-    nextState(state: StateType, play: PlayType): StateType;
-    winner(stateHistory: StateType[]): number;
-    normalize(state: StateType): StateType;
+export interface BoardState {
+    getHash(): bigint;
+    normalize(): bigint;
+}
+
+export interface Board<PlayType> {
+    start(): BoardState;
+    currentPlayer(state: BoardState): number;
+    nextPlayer(state: BoardState): number;
+    legalPlays(stateHistory: BoardState[]): PlayType[];
+    legalPlayStates(stateHistory: BoardState[]): {legal: PlayType[], playStates: PlayState<PlayType>[]};
+    nextState(state: BoardState, play: PlayType): BoardState;
+    winner(stateHistory: BoardState[]): number;
 };
