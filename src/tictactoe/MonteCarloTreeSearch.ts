@@ -18,10 +18,10 @@ export class MonteCarlo<PlayType> {
     skipExplored = true;
 
     states: BoardState[] = [];
-    wins: Map<bigint, number>[] = [];
-    winsIn: Map<bigint, number>[] = [];
-    plays: Map<bigint, number>[] = [];
-    explored = new Set<bigint>();
+    wins: Map<bigint|number, number>[] = [];
+    winsIn: Map<bigint|number, number>[] = [];
+    plays: Map<bigint|number, number>[] = [];
+    explored = new Set<bigint|number>();
     maxDepth = 0;
     running = false;
     stats: string[] = [];
@@ -33,12 +33,12 @@ export class MonteCarlo<PlayType> {
         if (params['C'] !== undefined) this.C = params.C;
         if (params['skipExplored'] !== undefined) this.skipExplored = params.skipExplored;
         this.ms = this.msFirst;
-        this.wins[1] = new Map<bigint, number>();
-        this.wins[2] = new Map<bigint, number>();
-        this.winsIn[1] = new Map<bigint, number>();
-        this.winsIn[2] = new Map<bigint, number>();
-        this.plays[1] = new Map<bigint, number>();
-        this.plays[2] = new Map<bigint, number>();
+        this.wins[1] = new Map<bigint|number, number>();
+        this.wins[2] = new Map<bigint|number, number>();
+        this.winsIn[1] = new Map<bigint|number, number>();
+        this.winsIn[2] = new Map<bigint|number, number>();
+        this.plays[1] = new Map<bigint|number, number>();
+        this.plays[2] = new Map<bigint|number, number>();
         this.states = [this.board.start()];
     }
 
@@ -151,7 +151,7 @@ export class MonteCarlo<PlayType> {
         this.getStats().forEach(line => console.error(line));
     }
 
-    pickBestCasePlay(stateNormalized: bigint, player: number, playStates: PlayState<PlayType>[], updateStats=false): PlayState<PlayType> {
+    pickBestCasePlay(stateNormalized: bigint|number, player: number, playStates: PlayState<PlayType>[], updateStats=false): PlayState<PlayType> {
         // we have fully explored the child states - there's no point in continuing
         // pick a random "best case" and return
         let bestCaseWinIn = new Map<number, PlayState<PlayType>[]>();
@@ -188,7 +188,7 @@ export class MonteCarlo<PlayType> {
     }
 
     runSimluation() {
-        let visitedStates: Set<bigint>[] = [];
+        let visitedStates: Set<bigint|number>[] = [];
         let statesCopy = this.states.slice();
         let state = statesCopy.at(-1);
         let stateNormalized = state.normalize();
@@ -196,8 +196,8 @@ export class MonteCarlo<PlayType> {
         let expand = true;
         let winner: number;
 
-        visitedStates[1] = new Set<bigint>();
-        visitedStates[2] = new Set<bigint>();
+        visitedStates[1] = new Set<bigint|number>();
+        visitedStates[2] = new Set<bigint|number>();
 
         visitedStates[player].add(stateNormalized);
 

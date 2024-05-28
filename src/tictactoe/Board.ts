@@ -1,13 +1,13 @@
 export type PlayState<PlayType> = {
     play: PlayType;
     nextState: BoardState;
-    nextStateHash: bigint;
-    nextStateNormalized: bigint;
+    nextStateHash: bigint|number;
+    nextStateNormalized: bigint|number;
 }
 
 export interface BoardState {
-    getHash(): bigint;
-    normalize(): bigint;
+    getHash(): bigint|number;
+    normalize(): bigint|number;
 }
 
 export interface BoardInspector {
