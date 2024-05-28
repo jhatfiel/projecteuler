@@ -23,6 +23,5 @@ export interface Board<PlayType> {
     legalPlayStates(stateHistory: BoardState[]): PlayState<PlayType>[];
     toPlayStates(lastState: BoardState, plays: PlayType[]): PlayState<PlayType>[];
     nextState(state: BoardState, play: PlayType): BoardState;
-    updateState(state: BoardState, play: PlayType);
     winner(stateHistory: BoardState[]): number;
 };

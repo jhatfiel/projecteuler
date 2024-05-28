@@ -150,9 +150,8 @@ const App = () => {
         BOARD.legalPlays([gameState.state]).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
 
         // make the ai play
-        let nextState = BOARD.nextState(gameState.state, play);
         addText(getStatLine('AI says to play: ', play, gameState.state));
-        gameState.state = nextState;
+        gameState.state = BOARD.nextState(gameState.state, play);
         prepareForNextTurn();
     };
 

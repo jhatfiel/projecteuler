@@ -141,10 +141,12 @@ export class TicTacToeBoard implements Board<Play> {
         let result = this.playCache.get(hash);
         if (result === undefined) {
             result = [];
+            let mask = 3;
             for (let i=0; i<9; i++) {
-                if ((lastState.board & 3<<(2*i)) === 0) {
+                if ((lastState.board & mask) === 0) {
                     result.push({player: lastState.currentPlayer, square: i});
                 }
+                mask <<= 2;
             }
             this.playCache.set(hash, result);
         }
@@ -167,12 +169,6 @@ export class TicTacToeBoard implements Board<Play> {
     }
 
     nextState(state: TicTacToeBoardState, play: Play): TicTacToeBoardState {
-        let result = state.clone();
-        this.updateState(result, play);
-        return result;
-    }
-
-    updateState(state: TicTacToeBoardState, play: Play) {
         let die = (message: string) => {
             state.printState();
             console.error(`Play: ${play.player} to ${play.square}`);
@@ -180,11 +176,12 @@ export class TicTacToeBoard implements Board<Play> {
         };
 
         if (state.currentPlayer !== play.player) die(`Tried to play on wrong turn`);
-
-        state.currentPlayer = 3-state.currentPlayer;
         if (state.board & (3<<(2*play.square))) die(`Tried to play in occupied square`);
 
-        state.board |= play.player << (2*play.square);
+        let result = state.clone();
+        result.board |= play.player << (2*play.square);
+        result.currentPlayer = 3-state.currentPlayer;
+        return result;
     }
 
     // 012
