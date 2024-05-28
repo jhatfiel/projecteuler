@@ -9,6 +9,8 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
     hash: number;
     normalized: number;
 
+    static BOARD_BITS = (1<<18) - 1;
+
     constructor() { }
 
     getHash(): number {
@@ -22,10 +24,10 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
 
         let hash = Number(this.getHash());
 
-        let hashes: number[] = [hash, this.mirrorHash(hash)];
+        let hashes: number[] = [hash, TicTacToeBoardState.mirrorHash(hash)];
         for (let i=0; i<3; i++) {
-            hash = this.rotateHash(hash);
-            hashes.push(hash, this.mirrorHash(hash));
+            hash = TicTacToeBoardState.rotateHash(hash);
+            hashes.push(hash, TicTacToeBoardState.mirrorHash(hash));
         }
         this.normalized = hashes.reduce((max, s) => max>s?max:s, 0);
 
@@ -49,7 +51,7 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
     // 012 036
     // 345 147
     // 678 258
-    mirrorHash(state: number): number {
+    static mirrorHash(state: number): number {
         //return this.fromSquares(state, [0, 3, 6, 1, 4, 7, 2, 5, 8]);
         return (state&3)      | ((state&192)>>4)  | ((state&12288)>>8)  |
               ((state&12)<<4) | (state&768)       | ((state&49152)>>4) |
@@ -69,7 +71,7 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
     // 012 630
     // 345 741
     // 678 852
-    rotateHash(state: number): number {
+    static rotateHash(state: number): number {
         //return this.fromSquares(state, [6, 3, 0, 7, 4, 1, 8, 5, 2]);
         return ((state&12288)>>12) | ((state&192)>>4)  | ((state&3)<<4) |
                ((state&49152)>>8)  | (state&768)       | ((state&12)<<8) |
@@ -85,18 +87,13 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
     }
 
     getCellPlayer(row: number, col: number): number {
-        for (let p of [1,2]) {
-            let mask = 3<<(2*(row*3+col));
-            if ((this.board & mask) === p) return p;
-        }
-        return 0;
+        let offset = 2*(row*3+col);
+        return (this.board & 3<<offset) >> offset;
     }
 
     getCellStyle(row: number, col: number): object {
         return {};
     }
-
-    invalidate() { this.hash = undefined; this.normalized = undefined; }
 
     printState() {
         console.error(this.toStringArr().join('\n'));
@@ -208,8 +205,12 @@ export class TicTacToeBoard implements Board<Play> {
         return `${Math.floor(square/3)} ${square%3}`;
     }
 
+    squareFromRowCol(row: number, col: number): number {
+        return row*3 + col;
+    }
+
     playFromInput(state: TicTacToeBoardState, str: string): Play {
-        var [row, col] = str.split(' ').map(Number);
+        let [row, col] = str.split(' ').map(Number);
         return {player: state.currentPlayer, square: row*3 + col};
     }
 }

@@ -9,7 +9,7 @@ type GameState = {state: TicTacToeBoardState, row: number, col: number};
 
 const Square = ({gameState, rowNum, colNum}: {gameState: GameState, rowNum: number, colNum: number}) => {
     // give the character at the specified square
-    let ch = [' ', 'X', 'O'][gameState.state.getCellPlayer(rowNum, colNum)];
+    const ch = [' ', 'X', 'O', '-'][gameState.state.getCellPlayer(rowNum, colNum)];
 
     // highlight the currently selected square
     const hl = { ...gameState.state.getCellStyle(rowNum, colNum), inverse: gameState.row === rowNum && gameState.col === colNum };
@@ -44,7 +44,7 @@ const AI = new MonteCarlo<Play>(BOARD);//, {msFirst: 10, msNormal: 10})//, {msFi
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
     let aiNum = 3-playerNum;
-    let [gameState, setGameState]: [GameState, (s: GameState)=>void] = useState({state: BOARD.start(), row: 1, col: 1});
+    let [gameState, setGameState]: [GameState, (GameState)=>void] = useState({state: BOARD.start(), row: 1, col: 1});
     let [gameMessage, setGameMessage] = useState(`Welcome, please select your player (prese q any time to quit)`);
     let [text, setText] = useState('');
     let [mode, setMode] = useState(0);
@@ -80,19 +80,18 @@ const App = () => {
 
     const selectValidSquare = () => {
         let cnt = 0;
-        let {row, col} = gameState;
-        let selected = row*3 + col;
+        let selected = gameState.row*3 + gameState.col;
         while (legalPlays.find(s => s.player === playerNum && s.square === selected) === undefined && cnt < 10) {
             selected++;
             selected %= 9;
             cnt++;
         }
-        row = Math.floor(selected/3);
-        col = selected % 3;
-        if (cnt === 10) { row = -1; col = -1; }
-        else if (row !== gameState.row || col !== gameState.col) {
-            gameState.row = row;
-            gameState.col = col;
+        let newRow = Math.floor(selected/3);
+        let newCol = selected%3;
+        if (cnt === 10) gameState.row = gameState.col = -1;
+        else if (gameState.row !== newRow || gameState.col !== newCol) {
+            gameState.row = newRow;
+            gameState.col = newCol;
             setGameState(gameState);
         }
     }
@@ -121,7 +120,8 @@ const App = () => {
     }
 
     // human makes a play
-    const humanPlay = (square: number) => {
+    const humanPlay = () => {
+        let square = BOARD.squareFromRowCol(gameState.row, gameState.col);
         if (legalPlays.find(s => s.player === playerNum && s.square === square) === undefined) {
             addText(`Invalid square, try again`);
             return;
@@ -197,7 +197,7 @@ const App = () => {
 
             if (input === ' ') {
                 // select square if legal
-                humanPlay(gameState.row*3 + gameState.col);
+                humanPlay();
             }
         }
 
@@ -223,8 +223,8 @@ const App = () => {
 
     let hintMessage = 'UNKNOWN';
     if (gameState && gameState.state.currentPlayer === playerNum) {
-        let selected = gameState.row*3 + gameState.col;
-        hintMessage = getStatLine('', {player: playerNum, square: selected}, gameState.state);
+        let square = BOARD.squareFromRowCol(gameState.row, gameState.col);
+        hintMessage = getStatLine('', {player: playerNum, square}, gameState.state);
     };
 
     // don't select an occupied square

@@ -1,21 +1,18 @@
 import { MonteCarlo } from "./MonteCarloTreeSearch";
-import { Play, UltimateTicTacToeBoard } from "./UltimateTicTacToeBoard";
+import { Play, UltimateTicTacToeBoard, UltimateTicTacToeBoardState } from "./UltimateTicTacToeBoard";
 
 import React, {useState, useEffect} from 'react';
 import {render, useInput, useApp, Text, Box} from 'ink';
 import SelectInput from 'ink-select-input';
 
-type GameState = {state: bigint, row: number, col: number};
+type GameState = {state: UltimateTicTacToeBoardState, row: number, col: number};
 
 const Square = ({gameState, rowNum, colNum}: {gameState: GameState, rowNum: number, colNum: number}) => {
     // give the character at the specified square
-    const square = BigInt(rowNum*9 + colNum);
-    let ch = ' ';
-    if ((gameState.state&BOARD.FULL_BIG_BOARD) & 1n<<square) ch = 'X';
-    if (((gameState.state>>81n)&BOARD.FULL_BIG_BOARD) & 1n<<square) ch = 'O';
+    const ch = [' ', 'X', 'O', '-'][gameState.state.getCellPlayer(rowNum, colNum)];
 
     // highlight the currently selected square
-    const hl = { inverse: rowNum === gameState.row && colNum === gameState.col};
+    const hl = { ...gameState.state.getCellStyle(rowNum, colNum), inverse: gameState.row === rowNum && gameState.col === colNum };
 
     return (
             <Text> <Text {...hl}>{ch}</Text> </Text>
@@ -45,12 +42,12 @@ const BoardRenderer = ({gameState}: {gameState: GameState}) => {
 };
 
 const BOARD = new UltimateTicTacToeBoard();
-const AI = new MonteCarlo<Play, bigint>(BOARD, {msFirst: 100, msNormal: 100});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10000, msNormal: 1000});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
     let aiNum = 3-playerNum;
-    let [gameState, setGameState]: [GameState, (GameState)=>void] = useState<GameState>({state: 0n, row: 4, col: 4});
+    let [gameState, setGameState]: [GameState, (GameState)=>void] = useState<GameState>({state: BOARD.start(), row: 4, col: 4});
     let [gameMessage, setGameMessage] = useState(`Welcome, please select your player (prese q any time to quit)`);
     let [text, setText] = useState('');
     let [mode, setMode] = useState(0);
@@ -77,7 +74,7 @@ const App = () => {
         addText(AI.stats[0]);
 
         // initialize game state
-        gameState.state = 0n;
+        gameState.state = BOARD.start();
         gameState.row = 4;
         gameState.col = 4;
 
@@ -85,16 +82,27 @@ const App = () => {
         prepareForNextTurn();
     };
 
+    const positionFromRowCol = (row: number, col: number): number => { return row*9 + col; }
+    const rowColFromPosition = (position: number): {row: number, col: number} => {
+        return {row: Math.floor(position/9), col: position%9};
+    }
+
     const selectValidSquare = () => {
         let cnt = 0;
-        let selected = gameState.row*9+gameState.col;
-        while (legalPlays.find(s => s.player === playerNum && s.square === selected) === undefined && cnt < 82) {
-            selected++;
-            selected %= 81;
+        let row = gameState.row;
+        let col = gameState.col;
+        let position = positionFromRowCol(row, col);
+        let board = BOARD.boardNumFromRowCol(row, col);
+        let square = BOARD.squareFromRowCol(row, col);
+        while (legalPlays.find(s => s.player === playerNum && s.board === board && s.square === square) === undefined && cnt < 82) {
+            position++;
+            position %= 81;
             cnt++;
+            ({row, col} = rowColFromPosition(position));
+            board = BOARD.boardNumFromRowCol(row, col);
+            square = BOARD.squareFromRowCol(row, col);
         }
-        let newRow = Math.floor(selected/9);
-        let newCol = selected%9;
+        let {row: newRow, col: newCol} = rowColFromPosition(position);
         if (cnt === 82) gameState.row = gameState.col = -1;
         else if (gameState.row !== newRow || gameState.col !== newCol) {
             gameState.row = newRow;
@@ -128,8 +136,9 @@ const App = () => {
 
     // human makes a play
     const humanPlay = () => {
-        let square = gameState.row*9 + gameState.col;
-        if (legalPlays.find(s => s.player === playerNum && s.square === square) === undefined) {
+        let board = BOARD.boardNumFromRowCol(gameState.row, gameState.col);
+        let square = BOARD.squareFromRowCol(gameState.row, gameState.col);
+        if (legalPlays.find(s => s.player === playerNum && s.board === board && s.square === square) === undefined) {
             addText(`Invalid square, try again`);
             return;
         }
@@ -140,7 +149,7 @@ const App = () => {
         //console.error(`Before p1=${BOARD.getPlayerHash(1, gameState.state).toString(2).padStart(81, '0')}`);
         //console.error(`Before p2=${BOARD.getPlayerHash(2, gameState.state).toString(2).padStart(81, '0')}`);
         //BOARD.printState(gameState.state);
-        gameState.state = BOARD.nextState(gameState.state, {player: playerNum, square: square});
+        gameState.state = BOARD.nextState(gameState.state, {player: playerNum, board, square});
         //console.error(`After state=${gameState.state.toString(2).padStart(181, '0')}`);
         //console.error(`After p1=${BOARD.getPlayerHash(1, gameState.state).toString(2).padStart(81, '0')}`);
         //console.error(`After p2=${BOARD.getPlayerHash(2, gameState.state).toString(2).padStart(81, '0')}`);
@@ -149,41 +158,31 @@ const App = () => {
         prepareForNextTurn();
     };
 
+    const getStatLine = (message: string, play: Play, state: UltimateTicTacToeBoardState): string => {
+            let s = AI.getStatsForPlay(play, state);
+            return `${message}${JSON.stringify(play)} - ${s.winPercent} ` +
+                `(${s.wins} / ${s.plays})` +
+                (s.explored?' E':'') +
+                (s.winsIn!==undefined?` W${s.winsIn}`:'') +
+                (s.losesIn!==undefined?` L${s.losesIn}`:'');
+    }
+
     const aiPlay = () => {
         // ai thinks about a play
         AI.stats = [];
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        BOARD.legalPlayStates([gameState.state]).playStates.slice(0, 10).forEach(({play, nextStateNormalized}) => {
-            let plays = AI.plays[aiNum].get(nextStateNormalized) ?? 1;
-            let wins = AI.wins[aiNum].get(nextStateNormalized) ?? 0;
-            let p = wins/plays;
-            let exploredStr = '';
-            let winsInStr = '';
-            let losesInStr = '';
-            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
-            if (AI.winsIn[aiNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[aiNum].get(nextStateNormalized)}`;
-            if (AI.winsIn[playerNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[playerNum].get(nextStateNormalized)}`;
-            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextStateNormalized)} / ${AI.plays[aiNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`);
-        });
+        BOARD.legalPlays([gameState.state]).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
 
         // make the ai play
-        let nextState = BOARD.nextState(gameState.state, play);
-        let nextStateNormalized = BOARD.normalize(nextState);
-
-        let wins = AI.wins[aiNum].get(nextStateNormalized);
-        let plays = AI.plays[aiNum].get(nextStateNormalized);
-        let explored = AI.explored.has(nextStateNormalized);
-        let winsIn = AI.winsIn[aiNum].get(nextStateNormalized);
-        let losesIn = AI.winsIn[playerNum].get(nextStateNormalized);
-        addText(`AI says to play: ${play.square} (${BOARD.playToOutput(play)}) (Win confidence: ${wins}/${plays} = ${(100*wins/plays).toFixed(2)}%) explored=${explored}, winsIn=${winsIn}, losesIn=${losesIn}`);
-        gameState.state = nextState;
+        addText(getStatLine('AI says to play: ', play, gameState.state));
+        gameState.state = BOARD.nextState(gameState.state, play);
         prepareForNextTurn();
     };
 
     const movePosition = (rd: number, cd: number) => {
-        const validPairs = legalPlays.map(play => ({row: Math.floor(play.square/9), col: play.square%9}));
+        const validPairs = legalPlays.map(play => ({row: Math.floor(play.board/3)*3 + Math.floor(play.square/3), col: (play.board%3)*3 + play.square%3}));
         let pos = {row: gameState.row, col: gameState.col};
         let found = false;
 
@@ -249,29 +248,17 @@ const App = () => {
     };
 
     let hintMessage = 'UNKNOWN';
-    if (gameState) {
-        let selected = gameState.row*9+gameState.col
-        if (legalPlays.filter(play => play.player === playerNum && play.square === selected).length) {
-            let nextStateNormalized = BOARD.normalize(BOARD.nextState(gameState.state, {player: playerNum, square: selected}));
-            let plays = AI.plays[playerNum].get(nextStateNormalized) ?? 1;
-            let wins = AI.wins[playerNum].get(nextStateNormalized) ?? 0;
-            let p = wins/plays;
-            let exploredStr = '';
-            let winsInStr = '';
-            let losesInStr = '';
-            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
-            if (AI.winsIn[playerNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[playerNum].get(nextStateNormalized)}`;
-            if (AI.winsIn[aiNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[aiNum].get(nextStateNormalized)}`;
-            hintMessage = `${(100*p).toFixed(2)}% (${AI.wins[playerNum].get(nextStateNormalized)} / ${AI.plays[playerNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`;
-        } else {
-            hintMessage = `OCCUPIED`;
-        }
+    if (gameState && gameState.state.currentPlayer === playerNum) {
+        let board = BOARD.boardNumFromRowCol(gameState.row, gameState.col);
+        let square = BOARD.squareFromRowCol(gameState.row, gameState.col);
+        hintMessage = getStatLine('', {player: playerNum, board, square}, gameState.state);
     };
 
     // don't select an occupied square
     selectValidSquare();
 
     return (
+        <>
         <Box>
             {/* board always visible */}
             <BoardRenderer gameState={gameState}/>
@@ -294,6 +281,8 @@ const App = () => {
                 <Text>{text}</Text>
             </Box>
         </Box>
+        <Text> State: { gameState.state.getHash().toString(2).padStart(167, '0') }</Text>
+        </>
     );
 };
 
