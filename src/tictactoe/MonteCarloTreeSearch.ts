@@ -39,10 +39,11 @@ export class MonteCarlo<PlayType> {
         this.winsIn[2] = new Map<bigint, number>();
         this.plays[1] = new Map<bigint, number>();
         this.plays[2] = new Map<bigint, number>();
+        this.states = [this.board.start()];
     }
 
     replay() {
-        this.states = [];
+        this.states = [this.board.start()];
     }
 
     update(state: BoardState) {
@@ -57,10 +58,10 @@ export class MonteCarlo<PlayType> {
         let state = this.states.at(-1);
         let stateNormalized = state.normalize();
         let player = this.board.currentPlayer(state);
-        let {legal, playStates} = this.board.legalPlayStates(this.states);
+        let plays = this.board.legalPlays(this.states);
 
-        if (!legal) {this.running = false; return; }
-        if (legal.length === 1) { this.running = false; return legal[0]; }
+        if (!plays) {this.running = false; return; }
+        if (plays.length === 1) { this.running = false; return plays[0]; }
 
         let games = 0;
         // if the base state is marked as explored.... we're done, even if enough time hasn't passed.
@@ -69,6 +70,8 @@ export class MonteCarlo<PlayType> {
             games++;
         }
         this.stats.push(`MonteCarlo: ${games} games played, ${Date.now()-now}ms ${this.explored.size} explored nodes, ${this.explored.has(stateNormalized)?'FULLY EXPLORED':''}`);
+
+        let playStates = this.board.toPlayStates(this.states.at(-1), plays);
 
         let bestPlay: PlayType;
         if (this.explored.has(stateNormalized)) {
@@ -86,7 +89,7 @@ export class MonteCarlo<PlayType> {
                 bestPlay = choice(playStates).play; // if all states are losing, we wouldn't end up picking a state here
                 playStates
                     .filter(ps => !this.winsIn[3-player].has(ps.nextStateNormalized)) // don't pick a state that is losing
-                    .filter(ps => !this.board.legalPlayStates([ps.nextState]).playStates.some(nps => this.winsIn[3-player].has(nps.nextStateNormalized))) // don't pick a state where the opponent can pick a winning state
+                    .filter(ps => !this.board.legalPlayStates([ps.nextState]).some(nps => this.winsIn[3-player].has(nps.nextStateNormalized))) // don't pick a state where the opponent can pick a winning state
                     .forEach(({play, nextStateNormalized}) => {
                         let plays = this.plays[player].get(nextStateNormalized) ?? 1;
                         let wins = this.wins[player].get(nextStateNormalized) ?? 0;
@@ -110,7 +113,7 @@ export class MonteCarlo<PlayType> {
         result.push('getPlay() playStates:');
         let state = this.states.at(-1);
         let player = this.board.currentPlayer(state);
-        this.board.legalPlayStates(this.states).playStates.forEach(({play, nextStateNormalized}) => {
+        this.board.legalPlayStates(this.states).forEach(({play, nextStateNormalized}) => {
             let wins = this.wins[player].get(nextStateNormalized) ?? 0;
             let plays = this.plays[player].get(nextStateNormalized) ?? 1;
             let p = wins/plays;
@@ -119,6 +122,29 @@ export class MonteCarlo<PlayType> {
 
         result.push(`Maximum depth searched: ${this.maxDepth}`);
         return result;
+    }
+
+    getStatsForPlay(play: PlayType, state: BoardState): {plays: number, wins: number, winPercent: string, explored: boolean, winsIn: number, losesIn: number} {
+        let currentPlayer = this.board.currentPlayer(state);
+        let plays: number;
+        let wins: number;
+        let winPercent: string;
+        let explored: boolean;
+        let winsIn: number;
+        let losesIn: number;
+
+        if (this.board.legalPlays([state]).find(s => Object.keys(s).every(k => s[k] === play[k]))) {
+            let nextStateNormalized = this.board.nextState(state, play).normalize();
+
+            plays = this.plays[currentPlayer].get(nextStateNormalized)?? 1;
+            wins = this.wins[currentPlayer].get(nextStateNormalized)?? 1;
+            winPercent = (100*wins/plays).toFixed(2) + '%';
+            explored = this.explored.has(nextStateNormalized);
+            winsIn = this.winsIn[currentPlayer].get(nextStateNormalized);
+            losesIn = this.winsIn[3-currentPlayer].get(nextStateNormalized);
+        }
+
+        return {plays, wins, winPercent, explored, winsIn, losesIn};
     }
 
     printStats() {
@@ -176,7 +202,7 @@ export class MonteCarlo<PlayType> {
         visitedStates[player].add(stateNormalized);
 
         for (let t=0; t < this.maxPlays; t++) {
-            let {playStates} = this.board.legalPlayStates(statesCopy);
+            let playStates = this.board.legalPlayStates(statesCopy);
             let unexploredStates = playStates.filter(ps => !this.skipExplored || !this.explored.has(ps.nextStateNormalized));
             if (unexploredStates.length === 0) {
                 // all child states are explored
@@ -187,10 +213,8 @@ export class MonteCarlo<PlayType> {
                 }
 
                 // pick the best state and stop the simulation, while marking this state correctly
-                let nextPS = this.pickBestCasePlay(stateNormalized, player, playStates, true);
-
                 // setup everything so that we fall out of the for loop
-                ({nextState: state, nextStateNormalized: stateNormalized} = nextPS);
+                ({nextState: state, nextStateNormalized: stateNormalized} = this.pickBestCasePlay(stateNormalized, player, playStates, true));
                 statesCopy.push(state);
                 visitedStates[player].add(stateNormalized);
                 if (this.winsIn[player].has(stateNormalized)) winner = player

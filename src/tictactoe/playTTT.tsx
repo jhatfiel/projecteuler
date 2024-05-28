@@ -5,31 +5,30 @@ import React, {useState, useEffect} from 'react';
 import {render, useInput, useApp, Text, Box} from 'ink';
 import SelectInput from 'ink-select-input';
 
-const Square = ({gameState, rowNum, colNum}) => {
+type GameState = {state: TicTacToeBoardState, row: number, col: number};
+
+const Square = ({gameState, rowNum, colNum}: {gameState: GameState, rowNum: number, colNum: number}) => {
     // give the character at the specified square
-    const square = rowNum*3 + colNum;
-    let ch = ' ';
-    if (gameState.state.xBoard & 1<<square) ch = 'X';
-    if (gameState.state.oBoard & 1<<square) ch = 'O';
+    let ch = [' ', 'X', 'O'][gameState.state.getCellPlayer(rowNum, colNum)];
 
     // highlight the currently selected square
-    const hl = { inverse: gameState.selected === rowNum*3 + colNum };
+    const hl = { ...gameState.state.getCellStyle(rowNum, colNum), inverse: gameState.row === rowNum && gameState.col === colNum };
 
     return (
             <Text> <Text {...hl}>{ch}</Text> </Text>
     );
 }
 
-const BoardRenderer = ({gameState}) => {
+const GridBoard = ({gameState, rows, cols}: {gameState: GameState, rows: number, cols: number}) => {
     // rowNum and colNum logic here just enables iteration over the positions of the board
     // silly reduce function seems to be the required way to join react components together with a separator
     return (
             <Box flexDirection="column" height={7} width={13} borderStyle="round" flexGrow={0}>
             {
-                [...Array(3)].map((_, rowNum) =>
+                [...Array(rows)].map((_, rowNum) =>
                     <Box flexDirection="row">
                     {
-                        [...Array(3)].map((_, colNum) => <Square gameState={gameState} rowNum={rowNum} colNum={colNum}/>)
+                        [...Array(cols)].map((_, colNum) => <Square gameState={gameState} rowNum={rowNum} colNum={colNum}/>)
                                     .reduce((acc, sq) => <>{acc}<Text>|</Text>{sq}</>)
                     }
                     </Box>
@@ -45,7 +44,7 @@ const AI = new MonteCarlo<Play>(BOARD);//, {msFirst: 10, msNormal: 10})//, {msFi
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
     let aiNum = 3-playerNum;
-    let [gameState, setGameState]: [{state: TicTacToeBoardState, selected: number}, (s: {state: TicTacToeBoardState, selected: number})=>void] = useState({state: BOARD.start(), selected: 4});
+    let [gameState, setGameState]: [GameState, (s: GameState)=>void] = useState({state: BOARD.start(), row: 1, col: 1});
     let [gameMessage, setGameMessage] = useState(`Welcome, please select your player (prese q any time to quit)`);
     let [text, setText] = useState('');
     let [mode, setMode] = useState(0);
@@ -66,14 +65,14 @@ const App = () => {
         let now = Date.now();
         AI.replay();
         AI.stats = [];
-        AI.update(BOARD.start());
         AI.getPlay(); // initialize the engine
         addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
         addText(AI.stats[0]);
 
         // initialize game state
         gameState.state = BOARD.start();
-        gameState.selected = 4;
+        gameState.row = 1;
+        gameState.col = 1;
 
         // prepareForNextTurn puts us in the right state for whoever's turn it is
         prepareForNextTurn();
@@ -81,15 +80,19 @@ const App = () => {
 
     const selectValidSquare = () => {
         let cnt = 0;
-        let selected = gameState.selected;
+        let {row, col} = gameState;
+        let selected = row*3 + col;
         while (legalPlays.find(s => s.player === playerNum && s.square === selected) === undefined && cnt < 10) {
             selected++;
             selected %= 9;
             cnt++;
         }
-        if (cnt === 10) gameState.selected = -1;
-        else if (gameState.selected !== selected) {
-            gameState.selected = selected;
+        row = Math.floor(selected/3);
+        col = selected % 3;
+        if (cnt === 10) { row = -1; col = -1; }
+        else if (row !== gameState.row || col !== gameState.col) {
+            gameState.row = row;
+            gameState.col = col;
             setGameState(gameState);
         }
     }
@@ -99,7 +102,8 @@ const App = () => {
         AI.update(gameState.state);
         const winner = BOARD.winner([gameState.state]);
         if (winner) {
-            gameState.selected = -1;
+            gameState.row = -1;
+            gameState.col = -1;
             let gameMessage = `Game Over!  `;
             if (winner === -1) gameMessage += `DRAW`;
             else if (winner === playerNum) { playerWins++; setPlayerWins(playerWins); gameMessage += `No way!!!  You won!`; }
@@ -128,42 +132,33 @@ const App = () => {
         prepareForNextTurn();
     };
 
+    const getStatLine = (message: string, play: Play, state: TicTacToeBoardState): string => {
+            let s = AI.getStatsForPlay(play, state);
+            return `${message}${JSON.stringify(play)} - ${s.winPercent} ` +
+                `(${s.wins} / ${s.plays})` +
+                (s.explored?' E':'') +
+                (s.winsIn!==undefined?` W${s.winsIn}`:'') +
+                (s.losesIn!==undefined?` L${s.losesIn}`:'');
+    }
+
     const aiPlay = () => {
         // ai thinks about a play
         AI.stats = [];
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        BOARD.legalPlayStates([gameState.state]).playStates.forEach(({play, nextStateNormalized}) => {
-            let plays = AI.plays[aiNum].get(nextStateNormalized) ?? 1;
-            let wins = AI.wins[aiNum].get(nextStateNormalized) ?? 0;
-            let p = wins/plays;
-            let exploredStr = '';
-            let winsInStr = '';
-            let losesInStr = '';
-            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
-            if (AI.winsIn[aiNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[aiNum].get(nextStateNormalized)}`;
-            if (AI.winsIn[playerNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[playerNum].get(nextStateNormalized)}`;
-            addText(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${AI.wins[aiNum].get(nextStateNormalized)} / ${AI.plays[aiNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`);
-        });
+        BOARD.legalPlays([gameState.state]).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
 
         // make the ai play
         let nextState = BOARD.nextState(gameState.state, play);
-        let nextStateNormalized = nextState.normalize();
-
-        let wins = AI.wins[aiNum].get(nextStateNormalized);
-        let plays = AI.plays[aiNum].get(nextStateNormalized);
-        let explored = AI.explored.has(nextStateNormalized);
-        let winsIn = AI.winsIn[aiNum].get(nextStateNormalized);
-        let losesIn = AI.winsIn[playerNum].get(nextStateNormalized);
-        addText(`AI says to play: ${play.square} (${BOARD.playToOutput(play)}) (Win confidence: ${wins}/${plays} = ${(100*wins/plays).toFixed(2)}%) explored=${explored}, winsIn=${winsIn}, losesIn=${losesIn}`);
+        addText(getStatLine('AI says to play: ', play, gameState.state));
         gameState.state = nextState;
         prepareForNextTurn();
     };
 
     const movePosition = (rd: number, cd: number) => {
         const validPairs = legalPlays.map(play => ({row: Math.floor(play.square/3), col: play.square%3}));
-        let pos = {row: Math.floor(gameState.selected/3), col: gameState.selected%3};
+        let pos = {row: gameState.row, col: gameState.col};
         let found = false;
 
         while (!found) {
@@ -172,25 +167,25 @@ const App = () => {
                 if (validPairs.find(p => p.row === pos.row && p.col === pos.col)) found = true;
                 else {
                     // try the other 2 possible cells in this row
-                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col+rd)) { found = true; pos.col += rd; }
-                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col-rd)) { found = true; pos.col -= rd; }
-                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col+2*rd)) { found = true; pos.col += 2*rd; }
-                    if (validPairs.find(p => p.row === pos.row && p.col === pos.col-2*rd)) { found = true; pos.col -= 2*rd; }
+                    for (let i=1; i<=2; i++) {
+                        if (validPairs.find(p => p.row === pos.row && p.col === pos.col+i*rd)) { found = true; pos.col += i*rd; }
+                        if (validPairs.find(p => p.row === pos.row && p.col === pos.col-i*rd)) { found = true; pos.col -= i*rd; }
+                    }
                 }
             } else { // moving cols
                 pos.col = (pos.col+cd+3)%3;
                 if (validPairs.find(p => p.row === pos.row && p.col === pos.col)) found = true;
                 else {
                     // try the other 2 possible cells in this col
-                    if (validPairs.find(p => p.row === pos.row-cd && p.col === pos.col)) { found = true; pos.row += cd; }
-                    if (validPairs.find(p => p.row === pos.row+cd && p.col === pos.col)) { found = true; pos.row -= cd; }
-                    if (validPairs.find(p => p.row === pos.row-2*cd && p.col === pos.col)) { found = true; pos.row -= 2*cd; }
-                    if (validPairs.find(p => p.row === pos.row+2*cd && p.col === pos.col)) { found = true; pos.row += 2*cd; }
+                    for (let i=1; i<=2; i++) {
+                        if (validPairs.find(p => p.row === pos.row-i*cd && p.col === pos.col)) { found = true; pos.row -= i*cd; }
+                        if (validPairs.find(p => p.row === pos.row+i*cd && p.col === pos.col)) { found = true; pos.row += i*cd; }
+                    }
                 }
             }
         }
 
-        setGameState({...gameState, selected: pos.row*3 + pos.col});
+        setGameState({...gameState, ...pos});
     }
 
     useInput((input, key) => {
@@ -203,7 +198,7 @@ const App = () => {
 
             if (input === ' ') {
                 // select square if legal
-                humanPlay(gameState.selected);
+                humanPlay(gameState.row*3 + gameState.col);
             }
         }
 
@@ -228,22 +223,9 @@ const App = () => {
     };
 
     let hintMessage = 'UNKNOWN';
-    if (gameState) {
-        if (legalPlays.filter(play => play.player === playerNum && play.square === gameState.selected).length) {
-            let nextStateNormalized = BOARD.nextState(gameState.state, {player: playerNum, square: gameState.selected}).normalize();
-            let plays = AI.plays[playerNum].get(nextStateNormalized) ?? 1;
-            let wins = AI.wins[playerNum].get(nextStateNormalized) ?? 0;
-            let p = wins/plays;
-            let exploredStr = '';
-            let winsInStr = '';
-            let losesInStr = '';
-            if (AI.explored.has(nextStateNormalized)) exploredStr = ' E';
-            if (AI.winsIn[playerNum].has(nextStateNormalized)) winsInStr = ` W${AI.winsIn[playerNum].get(nextStateNormalized)}`;
-            if (AI.winsIn[aiNum].has(nextStateNormalized)) losesInStr = ` L${AI.winsIn[aiNum].get(nextStateNormalized)}`;
-            hintMessage = `${(100*p).toFixed(2)}% (${AI.wins[playerNum].get(nextStateNormalized)} / ${AI.plays[playerNum].get(nextStateNormalized)})${exploredStr}${winsInStr}${losesInStr}`;
-        } else {
-            hintMessage = `OCCUPIED`;
-        }
+    if (gameState && gameState.state.currentPlayer === playerNum) {
+        let selected = gameState.row*3 + gameState.col;
+        hintMessage = getStatLine('', {player: playerNum, square: selected}, gameState.state);
     };
 
     // don't select an occupied square
@@ -252,7 +234,7 @@ const App = () => {
     return (
         <Box>
             {/* board always visible */}
-            <BoardRenderer gameState={gameState}/>
+            <GridBoard gameState={gameState} rows={3} cols={3}/>
             {/* mode=0, choose player box visible */}
             <Box flexDirection='column' flexGrow={1} display={mode===0?'flex':'none'}>
                 <Text>{gameMessage}</Text>

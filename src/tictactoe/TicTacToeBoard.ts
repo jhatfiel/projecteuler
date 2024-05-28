@@ -1,17 +1,18 @@
-import { Board, BoardState, PlayState } from './Board';
+import { Board, BoardInspector, BoardState, PlayState } from './Board';
 
 export type Play = { player: number; square: number; }
 
-export class TicTacToeBoardState implements BoardState {
-    xBoard = 0;
-    oBoard = 0;
+export class TicTacToeBoardState implements BoardState, BoardInspector {
+    board: number[] = []; // 0 for whether a spot is occupied at all, 1 for player 1 in that spot, 2 for player 2 in that spot
     currentPlayer = 1;
 
     hash: bigint;
     normalized: bigint;
 
+    constructor() { this.board[0] = this.board[1] = this.board[2] = 0; }
+
     getHash(): bigint {
-        if (this.hash === undefined) this.hash = BigInt(((this.currentPlayer-1) << 18) + (this.oBoard << 9) + this.xBoard);
+        if (this.hash === undefined) this.hash = BigInt(((this.currentPlayer-1) << 18) + (this.board[2] << 9) + this.board[1]);
         return this.hash;
     }
 
@@ -69,24 +70,37 @@ export class TicTacToeBoardState implements BoardState {
 
     clone(): TicTacToeBoardState {
         let result = new TicTacToeBoardState();
-        result.xBoard = this.xBoard;
-        result.oBoard = this.oBoard;
+        for (let p of [0, 1,2]) {
+            result.board[p] = this.board[p];
+        }
         result.currentPlayer = this.currentPlayer;
         return result;
+    }
+
+    getCellPlayer(row: number, col: number): number {
+        let mask = 1<<(row*3+col);
+        for (let p of [1,2]) {
+            if ((this.board[p] & mask) === mask) return p;
+        }
+        return 0;
+    }
+
+    getCellStyle(row: number, col: number): object {
+        return {};
     }
 
     invalidate() { this.hash = undefined; this.normalized = undefined; }
 
     printState() {
-        console.error(this.toString().join('\n'));
+        console.error(this.toStringArr().join('\n'));
     }
 
-    toString(): string[] {
+    toStringArr(): string[] {
         let result: string[] = [];
         let line = '';
         for (let i=0; i<9; i++) {
-            if (this.xBoard & 1<<i) line += 'X';
-            else if (this.oBoard & 1<<i) line += 'O';
+            if (this.board[1] & 1<<i) line += 'X';
+            else if (this.board[2] & 1<<i) line += 'O';
             else line += '.';
             if ((i+1) % 3 === 0) {
                 result.push(line);
@@ -96,10 +110,11 @@ export class TicTacToeBoardState implements BoardState {
         result.push(`Current Player: ${this.currentPlayer}`);
         return result;
     }
-
 }
 
 export class TicTacToeBoard implements Board<Play> {
+    playCache = new Map<bigint, Play[]>();
+
     start(): TicTacToeBoardState {
         return new TicTacToeBoardState();
     }
@@ -112,36 +127,44 @@ export class TicTacToeBoard implements Board<Play> {
         return 3 - state.currentPlayer;
     }
 
-    getPlayerHash(player: number, state: TicTacToeBoardState): number {
-        if (player === 0) return state.xBoard;
-        else return state.oBoard;
-    }
-
     legalPlays(stateHistory: TicTacToeBoardState[]): Play[] {
-        let result: Play[] = [];
         let lastState = stateHistory.at(-1);
-        for (let i=0; i<9; i++) {
-            if (((lastState.xBoard | lastState.oBoard) & 1<<i) === 0) {
-                result.push({player: lastState.currentPlayer, square: i});
+        let hash = lastState.getHash();
+        let result = this.playCache.get(hash);
+        if (result === undefined) {
+            result = [];
+            for (let i=0; i<9; i++) {
+                if ((lastState.board[0] & 1<<i) === 0) {
+                    result.push({player: lastState.currentPlayer, square: i});
+                }
             }
+            this.playCache.set(hash, result);
         }
         return result;
     }
 
-    legalPlayStates(stateHistory: TicTacToeBoardState[]): {legal: Play[], playStates: PlayState<Play>[]} {
+    legalPlayStates(stateHistory: TicTacToeBoardState[]): PlayState<Play>[] {
         let lastState = stateHistory.at(-1);
         let legal = this.legalPlays(stateHistory);
-        return {legal,
-                playStates: legal.map(play => {
+        return this.toPlayStates(lastState, legal)
+    }
+
+    toPlayStates(lastState: TicTacToeBoardState, legal: Play[]): PlayState<Play>[] {
+        return legal.map(play => {
                     let nextState = this.nextState(lastState, play);
                     let nextStateHash = nextState.getHash();
                     let nextStateNormalized = nextState.normalize();
                     return {play, nextState, nextStateHash, nextStateNormalized};
-                })
-        };
+                });
     }
 
     nextState(state: TicTacToeBoardState, play: Play): TicTacToeBoardState {
+        let result = state.clone();
+        this.updateState(result, play);
+        return result;
+    }
+
+    updateState(state: TicTacToeBoardState, play: Play) {
         let die = (message: string) => {
             state.printState();
             console.error(`Play: ${play.player} to ${play.square}`);
@@ -150,14 +173,11 @@ export class TicTacToeBoard implements Board<Play> {
 
         if (state.currentPlayer !== play.player) die(`Tried to play on wrong turn`);
 
-        let result = state.clone();
-        result.currentPlayer = 3-result.currentPlayer;
-        if ((result.xBoard | result.oBoard) & (1<<play.square)) die(`Tried to play in occupied square`);
+        state.currentPlayer = 3-state.currentPlayer;
+        if (state.board[0] & (1<<play.square)) die(`Tried to play in occupied square`);
 
-        if (play.player === 1) result.xBoard |= 1<<play.square;
-        else result.oBoard |= 1<<play.square;
-
-        return result;
+        state.board[play.player] |= 1<<play.square;
+        state.board[0] |= 1<<play.square;
     }
 
     // 1 2 4
@@ -167,9 +187,10 @@ export class TicTacToeBoard implements Board<Play> {
     FULL_BOARD = 511;
     winner(stateHistory: TicTacToeBoardState[]): number {
         let lastState = stateHistory.at(-1);
-        if (this.MAGIC_WIN_NUMBERS.some(w => (lastState.xBoard & w) === w)) return 1;
-        if (this.MAGIC_WIN_NUMBERS.some(w => (lastState.oBoard & w) === w)) return 2;
-        if (((lastState.xBoard | lastState.oBoard) ^ this.FULL_BOARD) === 0) return -1;
+        for (let p of [1,2]) {
+            if (this.MAGIC_WIN_NUMBERS.some(w => (lastState.board[p] & w) === w)) return p;
+        }
+        if ((lastState.board[0] ^ this.FULL_BOARD) === 0) return -1;
         return 0;
     }
 
