@@ -39,11 +39,11 @@ export class MonteCarlo<PlayType> {
         this.winsIn[2] = new Map<bigint|number, number>();
         this.plays[1] = new Map<bigint|number, number>();
         this.plays[2] = new Map<bigint|number, number>();
-        this.states = [this.board.start()];
+        this.states = [];
     }
 
     replay() {
-        this.states = [this.board.start()];
+        this.states = [];
     }
 
     update(state: BoardState) {
@@ -137,7 +137,7 @@ export class MonteCarlo<PlayType> {
             let nextStateNormalized = this.board.nextState(state, play).normalize();
 
             plays = this.plays[currentPlayer].get(nextStateNormalized)?? 1;
-            wins = this.wins[currentPlayer].get(nextStateNormalized)?? 1;
+            wins = this.wins[currentPlayer].get(nextStateNormalized)?? 0;
             winPercent = (100*wins/plays).toFixed(2) + '%';
             explored = this.explored.has(nextStateNormalized);
             winsIn = this.winsIn[currentPlayer].get(nextStateNormalized);
@@ -203,6 +203,22 @@ export class MonteCarlo<PlayType> {
 
         for (let t=0; t < this.maxPlays; t++) {
             let playStates = this.board.legalPlayStates(statesCopy);
+            /*
+            // quickly mark each child state if it's an endgame state
+            // this way we are guaranteed to NOT select something that will cause us to lose immediately
+            playStates
+                .filter(ps => !this.explored.has(ps.nextStateNormalized) && this.board.winner([ps.nextState]))
+                .forEach(ps => {
+                    if (!this.plays[3-player].has(ps.nextStateNormalized)) {
+                        this.plays[3-player].set(ps.nextStateNormalized, 1);
+                        this.wins[3-player].set(ps.nextStateNormalized, 0);
+                    }
+                    let winner = this.board.winner([ps.nextState]);
+                    if (winner === player) this.wins[player].set(ps.nextStateNormalized, this.wins[player].get(ps.nextStateNormalized)+1);
+                    else if (winner === 3-player) this.wins[3-player].set(ps.nextStateNormalized, this.wins[3-player].get(ps.nextStateNormalized)+1);
+                    this.explored.add(ps.nextStateNormalized);
+                });
+                */
             let unexploredStates = playStates.filter(ps => !this.skipExplored || !this.explored.has(ps.nextStateNormalized));
             if (unexploredStates.length === 0) {
                 // all child states are explored

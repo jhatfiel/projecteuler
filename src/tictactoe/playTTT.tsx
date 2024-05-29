@@ -64,6 +64,7 @@ const App = () => {
     const startGame = () => {
         let now = Date.now();
         AI.replay();
+        AI.update(gameState.state);
         AI.stats = [];
         AI.getPlay(); // initialize the engine
         addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
@@ -98,7 +99,6 @@ const App = () => {
 
     const prepareForNextTurn = () => {
         setGameState(gameState);
-        AI.update(gameState.state);
         const winner = BOARD.winner([gameState.state]);
         if (winner) {
             gameState.row = -1;
@@ -129,16 +129,20 @@ const App = () => {
 
         text = ''; setText(text);
         gameState.state = BOARD.nextState(gameState.state, {player: playerNum, square: square});
+        AI.update(gameState.state);
         prepareForNextTurn();
     };
 
-    const getStatLine = (message: string, play: Play, state: TicTacToeBoardState): string => {
-            let s = AI.getStatsForPlay(play, state);
-            return `${message}${JSON.stringify(play)} - ${s.winPercent} ` +
+    const getStatLineForStats = (message, s): string => {
+            return `${message} - ${s.winPercent} ` +
                 `(${s.wins} / ${s.plays})` +
                 (s.explored?' E':'') +
                 (s.winsIn!==undefined?` W${s.winsIn}`:'') +
                 (s.losesIn!==undefined?` L${s.losesIn}`:'');
+    }
+    const getStatLine = (message: string, play: Play, state: TicTacToeBoardState): string => {
+            let s = AI.getStatsForPlay(play, state);
+            return getStatLineForStats(`${message}${JSON.stringify(play)}`, s);
     }
 
     const aiPlay = () => {
@@ -147,11 +151,16 @@ const App = () => {
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        BOARD.legalPlays([gameState.state]).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
+        BOARD.legalPlays([gameState.state])
+            .map(play => ({play, s: AI.getStatsForPlay(play, gameState.state)}))
+            .sort((a, b) => b.s.wins/b.s.plays - a.s.wins/a.s.plays)
+            .slice(0, 100)
+            .forEach(stats => addText(getStatLineForStats(`Play: ${JSON.stringify(stats.play)}`, stats.s)));
 
         // make the ai play
         addText(getStatLine('AI says to play: ', play, gameState.state));
         gameState.state = BOARD.nextState(gameState.state, play);
+        AI.update(gameState.state);
         prepareForNextTurn();
     };
 

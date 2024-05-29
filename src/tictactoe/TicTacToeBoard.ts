@@ -34,6 +34,10 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
         return this.normalized;
     }
 
+    invalidate() {
+        this.hash = this.normalized = undefined;
+    }
+
     fromSquares(state: number, mapping: number[]): number {
         let newState = state & 1<<18;
         mapping.forEach((origInd, ind) => {

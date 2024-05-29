@@ -1,5 +1,5 @@
 import { MonteCarlo } from "./MonteCarloTreeSearch.js";
-import { Play, TicTacToeBoard } from "./TicTacToeBoard.js";
+import { Play, TicTacToeBoard, TicTacToeBoardState } from "./TicTacToeBoard.js";
 import inquirer from 'inquirer';
 import Rx from 'rxjs';
 
@@ -7,7 +7,7 @@ class Game {
     prompts = new Rx.Subject();
     BOARD = new TicTacToeBoard();
     AI = new MonteCarlo<Play>(this.BOARD, {msFirst: 50, msNormal: 10});
-    STATE: number;
+    STATE: TicTacToeBoardState;
     playerNum: number;
     aiNum: number;
 
@@ -67,7 +67,7 @@ class Game {
 
     checkDone() {
         console.log(`Board State`);
-        this.BOARD.printState(this.STATE);
+        this.STATE.printState();
         const winner = this.BOARD.winner([this.STATE]);
         if (winner) {
             console.log(`The game has ended`);
@@ -85,8 +85,8 @@ class Game {
         let play = this.AI.getPlay();
         //this.AI.printStats();
         this.STATE = this.BOARD.nextState(this.STATE, play);
-        let wins = this.AI.wins[this.aiNum].get(this.STATE);
-        let plays = this.AI.plays[this.aiNum].get(this.STATE);
+        let wins = this.AI.wins[this.aiNum].get(this.STATE.normalize());
+        let plays = this.AI.plays[this.aiNum].get(this.STATE.normalize());
         console.log(`AI says to play: ${play.square} (${this.BOARD.playToOutput(play)}) (Win confidence: ${(100*wins/plays).toFixed(2)}%)`);
         this.AI.update(this.STATE);
         this.checkDone();

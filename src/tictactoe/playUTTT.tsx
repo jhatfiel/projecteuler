@@ -42,7 +42,7 @@ const BoardRenderer = ({gameState}: {gameState: GameState}) => {
 };
 
 const BOARD = new UltimateTicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD, {msFirst: 1000, msNormal: 1000});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10000, msNormal: 1000});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
@@ -113,7 +113,6 @@ const App = () => {
 
     const prepareForNextTurn = () => {
         setGameState(gameState);
-        AI.update(gameState.state);
         const winner = BOARD.winner([gameState.state]);
         if (winner) {
             gameState.row = -1;
@@ -155,16 +154,20 @@ const App = () => {
         //console.error(`After p2=${BOARD.getPlayerHash(2, gameState.state).toString(2).padStart(81, '0')}`);
         //BOARD.printState(gameState.state);
 
+        AI.update(gameState.state);
         prepareForNextTurn();
     };
 
-    const getStatLine = (message: string, play: Play, state: UltimateTicTacToeBoardState): string => {
-            let s = AI.getStatsForPlay(play, state);
-            return `${message}${JSON.stringify(play)} - ${s.winPercent} ` +
+    const getStatLineForStats = (message, s): string => {
+            return `${message} - ${s.winPercent} ` +
                 `(${s.wins} / ${s.plays})` +
                 (s.explored?' E':'') +
                 (s.winsIn!==undefined?` W${s.winsIn}`:'') +
                 (s.losesIn!==undefined?` L${s.losesIn}`:'');
+    }
+    const getStatLine = (message: string, play: Play, state: UltimateTicTacToeBoardState): string => {
+            let s = AI.getStatsForPlay(play, state);
+            return getStatLineForStats(`${message}${JSON.stringify(play)}`, s);
     }
 
     const aiPlay = () => {
@@ -173,11 +176,16 @@ const App = () => {
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        BOARD.legalPlays([gameState.state]).slice(0, 10).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
+        BOARD.legalPlays([gameState.state])
+            .map(play => ({play, s: AI.getStatsForPlay(play, gameState.state)}))
+            .sort((a, b) => b.s.wins/b.s.plays - a.s.wins/a.s.plays)
+            .slice(0, 10)
+            .forEach(stats => addText(getStatLineForStats(`Play: ${JSON.stringify(stats.play)}`, stats.s)));
 
         // make the ai play
         addText(getStatLine('AI says to play: ', play, gameState.state));
         gameState.state = BOARD.nextState(gameState.state, play);
+        AI.update(gameState.state);
         prepareForNextTurn();
     };
 

@@ -37,8 +37,12 @@ export class UltimateTicTacToeBoardState implements BoardState, BoardInspector {
     }
 
     // normalize a state so that the MCTS doesn't have to store rotated/reflected copies of each state
+    // sadly the individual small boards can't all be normalized
+    // however, we can normalize all of the rotation/reflections of the larger board
+    // (and rotate/reflect all the smaller boards in the same way)
+    // (while updating the limitToBoard as well)
     normalize(): bigint {
-        return this.hash;
+        return this.getHash();
         /*
         if (this.normalized !== undefined) return this.normalized;
 
@@ -136,7 +140,7 @@ export class UltimateTicTacToeBoardState implements BoardState, BoardInspector {
             let line = '';
             for (let col=0; col<9; col++) {
                 let board = this.smallBoard[this.getSmallBoardNumber(row, col)];
-                line += ['.', 'X', 'O'][board.getCellPlayer(row%3, col%3)];
+                line += ['.', 'X', 'O', '%'][board.getCellPlayer(row%3, col%3)];
                 if ((col+1) % 3 === 0) line += ' ';
             }
             result.push(line);
@@ -166,6 +170,7 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         for (let board=0; board<9; board++) {
             if (lastState.limitToBoard === 15 || lastState.limitToBoard === board) {
                 lastState.smallBoard[board].currentPlayer = lastState.currentPlayer;
+                lastState.smallBoard[board].invalidate();
                 TTTBoard.legalPlays([lastState.smallBoard[board]]).forEach(play => result.push({...play, player: lastState.currentPlayer, board}));
             }
         }
@@ -252,3 +257,10 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         return {player: this.currentPlayer(state), board, square};
     }
 }
+
+/*
+let bs = new TicTacToeBoardState();
+bs.board = 0b111111111111110101;
+bs.printState();
+console.log(TTTBoard.winner([bs]));
+*/
