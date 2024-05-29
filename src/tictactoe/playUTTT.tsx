@@ -67,6 +67,7 @@ const App = () => {
     const startGame = () => {
         let now = Date.now();
         AI.replay();
+        gameState.state = BOARD.start();
         AI.update(gameState.state);
         AI.stats = [];
         AI.getPlay(); // initialize the engine
