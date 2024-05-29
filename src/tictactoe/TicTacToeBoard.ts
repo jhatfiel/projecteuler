@@ -189,7 +189,7 @@ export class TicTacToeBoard implements Board<Play> {
     winner(stateHistory: TicTacToeBoardState[]): number {
         let lastState = stateHistory.at(-1);
         for (let p of [0,1]) {
-            if (this.MAGIC_WIN_NUMBERS.some(w => ((lastState.board & (w<<p)) === (w<<p)) && !((lastState.board & (w<<(1-p))) === (w<<(1-p))))) return p+1;
+            if (this.MAGIC_WIN_NUMBERS.some(w => ((lastState.board & (w<<p)) === (w<<p)) && ((lastState.board & (w<<(1-p))) === 0))) return p+1;
         }
         for (let pos = 0; pos < 9; pos++) {
             if ((lastState.board & (3<<(2*pos))) === 0) return 0;
