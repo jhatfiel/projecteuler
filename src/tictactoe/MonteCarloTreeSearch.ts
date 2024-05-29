@@ -1,4 +1,7 @@
+import { resolve } from "path";
 import { Board, BoardState, PlayState } from "./Board";
+import { Play, UltimateTicTacToeBoard, UltimateTicTacToeBoardState } from "./UltimateTicTacToeBoard";
+import { fileURLToPath } from "url";
 function choice<T>(arr: T[]): T {
     return arr[Math.floor(Math.random()*arr.length)];
 }
@@ -112,13 +115,17 @@ export class MonteCarlo<PlayType> {
         this.stats = [];
         result.push('getPlay() playStates:');
         let state = this.states.at(-1);
-        let player = this.board.currentPlayer(state);
-        this.board.legalPlayStates(this.states).forEach(({play, nextStateNormalized}) => {
-            let wins = this.wins[player].get(nextStateNormalized) ?? 0;
-            let plays = this.plays[player].get(nextStateNormalized) ?? 1;
-            let p = wins/plays;
-            result.push(`Play: ${JSON.stringify(play)} - ${(100*p).toFixed(2)}% (${this.wins[player].get(nextStateNormalized)} / ${this.plays[player].get(nextStateNormalized)}})`);
-        });
+        this.board.legalPlays(this.states)
+            .map(play => ({play, s: this.getStatsForPlay(play, state)}))
+            .sort((a, b) => b.s.wins/b.s.plays - a.s.wins/a.s.plays)
+            .slice(0, 10)
+            .forEach(stats => {
+                result.push(`Play: ${JSON.stringify(stats.play)} - ${stats.s.winPercent} ` +
+                    `(${stats.s.wins} / ${stats.s.plays})` +
+                    (stats.s.explored?' E':'') +
+                    (stats.s.winsIn!==undefined?` W${stats.s.winsIn}`:'') +
+                    (stats.s.losesIn!==undefined?` L${stats.s.losesIn}`:''));
+                });
 
         result.push(`Maximum depth searched: ${this.maxDepth}`);
         return result;
@@ -222,7 +229,7 @@ export class MonteCarlo<PlayType> {
             let unexploredStates = playStates.filter(ps => !this.skipExplored || !this.explored.has(ps.nextStateNormalized));
             if (unexploredStates.length === 0) {
                 // all child states are explored
-                this.explored.add(stateNormalized);
+                if (this.skipExplored) this.explored.add(stateNormalized);
                 if (!this.plays[3-player].has(stateNormalized)) {
                     this.plays[3-player].set(stateNormalized, 0);
                     this.wins[3-player].set(stateNormalized, 0);
@@ -256,8 +263,8 @@ export class MonteCarlo<PlayType> {
                     // if we haven't tried every play at least once yet, just choose randomly
                     // should we limit the search to the unexplored states or all states? This encourages filling out the tree faster, but that may not be desirable
                     //({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates.filter(ps => !this.plays[player].has(ps.nextStateNormalized))));
-                    //({nextState: state, nextStateNormalized: stateNormalized} = choice(playStates));
-                    ({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates));
+                    ({nextState: state, nextStateNormalized: stateNormalized} = choice(playStates));
+                    //({nextState: state, nextStateNormalized: stateNormalized} = choice(unexploredStates));
                 }
                 statesCopy.push(state);
                 visitedStates[player].add(stateNormalized);
@@ -269,11 +276,11 @@ export class MonteCarlo<PlayType> {
                 expand = false;
                 this.plays[player].set(stateNormalized, 0);
                 this.wins[player].set(stateNormalized, 0);
-                if (t > this.maxDepth) this.maxDepth = t;
+                if (expand && t > this.maxDepth) this.maxDepth = t;
             }
 
             if (winner) {
-                this.explored.add(stateNormalized);
+                if (this.skipExplored) this.explored.add(stateNormalized);
                 break;
             }
             player = this.board.currentPlayer(state);
@@ -285,6 +292,33 @@ export class MonteCarlo<PlayType> {
                 this.plays[player].set(stateNormalized, this.plays[player].get(stateNormalized)+1);
                 if (player === winner) this.wins[player].set(stateNormalized, this.wins[player].get(stateNormalized)+1);
             }
+        }
+    }
+}
+
+const pathToThisFile = resolve(fileURLToPath(import.meta.url));
+const pathPassedToNode = resolve(process.argv[1]);
+if (pathToThisFile.includes(pathPassedToNode)) {
+    const BOARD = new UltimateTicTacToeBoard();
+    const AI = new MonteCarlo<Play>(BOARD, {msFirst: 30*60*1000, msNormal: 1000});
+    AI.update(BOARD.start());
+    AI.getPlay();
+    AI.printStats()
+
+    for (let stateNormalized of AI.explored.keys()) {
+        let xWinsIn = AI.winsIn[1].get(stateNormalized);
+        let oWinsIn = AI.winsIn[2].get(stateNormalized);
+        if (xWinsIn > 1 || oWinsIn > 1) {
+            let winsInStr = 'CAT GAME';
+            if (xWinsIn !== undefined) {
+                winsInStr = `X wins in ${xWinsIn}`;
+            } else {
+                winsInStr = `O wins in ${oWinsIn}`;
+            }
+            console.log(`Fully explored: ${stateNormalized}, ${winsInStr}`);
+            let state = UltimateTicTacToeBoardState.fromHash(BigInt(stateNormalized));
+            state.printState();
+
         }
     }
 }

@@ -13,6 +13,13 @@ export class TicTacToeBoardState implements BoardState, BoardInspector {
 
     constructor() { }
 
+    static fromHash(hash: number): TicTacToeBoardState {
+        let result = new TicTacToeBoardState();
+        result.currentPlayer = (hash & (1<<18) >> 18) + 1;
+        result.board = (hash & this.BOARD_BITS);
+        return result;
+    }
+
     getHash(): number {
         if (this.hash === undefined) this.hash = ((this.currentPlayer-1) << 18) + this.board;
         return this.hash;

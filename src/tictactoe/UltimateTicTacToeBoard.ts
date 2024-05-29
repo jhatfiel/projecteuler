@@ -28,6 +28,27 @@ export class UltimateTicTacToeBoardState implements BoardState, BoardInspector {
 
     constructor() { }
 
+    static fromHash(hash: bigint): UltimateTicTacToeBoardState {
+        let result = new UltimateTicTacToeBoardState();
+        result.currentPlayer = Number(1n + ((hash >> 162n) & 1n));
+        result.limitToBoard  = Number(((hash >> 163n) & 15n));
+        result.bigBoard.currentPlayer = result.currentPlayer;
+        for (let i=0; i<9; i++) {
+            const bi = BigInt(i);
+            const sb = TicTacToeBoardState.fromHash(Number((hash >> (bi*18n)) & BigInt(TicTacToeBoardState.BOARD_BITS)));
+            sb.currentPlayer = result.currentPlayer;
+            result.smallBoard[i] = sb;
+
+            if (sb.board === UltimateTicTacToeBoard.FULL_OF_X) {
+                result.bigBoard.board |= 1 << (2*i);
+            } else if (sb.board === UltimateTicTacToeBoard.FULL_OF_X << 1) {
+                result.bigBoard.board |= 2 << (2*i);
+            }
+        }
+
+        return result;
+    }
+
     getHash(): bigint {
         if (this.hash === undefined) {
             this.hash = (BigInt(this.currentPlayer-1) << 162n) | (BigInt(this.limitToBoard) << 163n);
@@ -214,11 +235,11 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         if (smallBoardWinner > 0) {
             result.bigBoard = result.bigBoard.clone();
             result.bigBoard.board |= play.player << (2*play.board);
-            result.smallBoard[play.board].board = this.FULL_OF_X << (play.player-1);
+            result.smallBoard[play.board].board = UltimateTicTacToeBoard.FULL_OF_X << (play.player-1);
         } else if (smallBoardWinner === -1) { // draw
             result.bigBoard = result.bigBoard.clone();
             result.bigBoard.board |= 3 << (2*play.board);
-            result.smallBoard[play.board].board = this.FULL_OF_X | (this.FULL_OF_X<<1);
+            result.smallBoard[play.board].board = UltimateTicTacToeBoard.FULL_OF_X | (UltimateTicTacToeBoard.FULL_OF_X<<1);
         }
 
         // TODO: Update the board we are allowed to play on
@@ -227,7 +248,7 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         return result;
     }
 
-    FULL_OF_X = 0b010101010101010101;
+    static FULL_OF_X = 0b010101010101010101;
     winner(stateHistory: UltimateTicTacToeBoardState[]): number {
         let lastState = stateHistory.at(-1);
         return TTTBoard.winner([lastState.bigBoard]);
