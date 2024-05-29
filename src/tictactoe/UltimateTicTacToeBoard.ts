@@ -103,9 +103,9 @@ export class UltimateTicTacToeBoardState implements BoardState, BoardInspector {
     clone(): UltimateTicTacToeBoardState {
         let result = new UltimateTicTacToeBoardState();
         for (let i=0; i<9; i++) {
-            result.smallBoard[i] = this.smallBoard[i].clone();
+            result.smallBoard[i] = this.smallBoard[i];
         }
-        result.bigBoard = this.bigBoard.clone();
+        result.bigBoard = this.bigBoard;
         result.currentPlayer = this.currentPlayer;
         result.limitToBoard = this.limitToBoard;
         return result;
@@ -165,7 +165,8 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         let lastState = stateHistory.at(-1);
         for (let board=0; board<9; board++) {
             if (lastState.limitToBoard === 15 || lastState.limitToBoard === board) {
-                TTTBoard.legalPlays([lastState.smallBoard[board]]).forEach(play => result.push({...play, board}));
+                lastState.smallBoard[board].currentPlayer = lastState.currentPlayer;
+                TTTBoard.legalPlays([lastState.smallBoard[board]]).forEach(play => result.push({...play, player: lastState.currentPlayer, board}));
             }
         }
         return result;
@@ -197,17 +198,20 @@ export class UltimateTicTacToeBoard implements Board<Play> {
         if (state.smallBoard[play.board].board & (3<<(2*play.square))) die(`Tried to play in occupied square`);
 
         let result = state.clone();
+        result.smallBoard[play.board] = result.smallBoard[play.board].clone();
         result.smallBoard[play.board].board |= play.player << (2*play.square);
         result.currentPlayer = 3-state.currentPlayer;
-        for (let b=0; b<9; b++) { result.smallBoard[b].currentPlayer = result.currentPlayer; }
-        result.bigBoard.currentPlayer = result.currentPlayer;
+        //for (let b=0; b<9; b++) { result.smallBoard[b].currentPlayer = result.currentPlayer; }
+        //result.bigBoard.currentPlayer = result.currentPlayer;
         // TODO: need to calculate the cache of the big board here (i.e., keep track of who wins the small games)
         // TODO: When a small board is won, replace it with 9 copies of the winning player (greatly reduces the search space!)
         let smallBoardWinner = TTTBoard.winner([result.smallBoard[play.board]]);
         if (smallBoardWinner > 0) {
+            result.bigBoard = result.bigBoard.clone();
             result.bigBoard.board |= play.player << (2*play.board);
             result.smallBoard[play.board].board = this.FULL_OF_X << (play.player-1);
         } else if (smallBoardWinner === -1) { // draw
+            result.bigBoard = result.bigBoard.clone();
             result.bigBoard.board |= 3 << (2*play.board);
             result.smallBoard[play.board].board = this.FULL_OF_X | (this.FULL_OF_X<<1);
         }
@@ -219,10 +223,6 @@ export class UltimateTicTacToeBoard implements Board<Play> {
     }
 
     FULL_OF_X = 0b010101010101010101;
-    // 012
-    // 345
-    // 678
-    MAGIC_WIN_NUMBERS = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]].map(arr=>arr.reduce((mask, pos) => mask|=1<<(2*pos), 0));
     winner(stateHistory: UltimateTicTacToeBoardState[]): number {
         let lastState = stateHistory.at(-1);
         return TTTBoard.winner([lastState.bigBoard]);

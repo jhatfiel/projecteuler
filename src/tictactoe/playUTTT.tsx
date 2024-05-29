@@ -15,7 +15,7 @@ const Square = ({gameState, rowNum, colNum}: {gameState: GameState, rowNum: numb
     const hl = { ...gameState.state.getCellStyle(rowNum, colNum), inverse: gameState.row === rowNum && gameState.col === colNum };
 
     return (
-            <Text> <Text {...hl}>{ch}</Text> </Text>
+            <Text {...hl}> <Text>{ch}</Text> </Text>
     );
 };
 
@@ -42,7 +42,7 @@ const BoardRenderer = ({gameState}: {gameState: GameState}) => {
 };
 
 const BOARD = new UltimateTicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10000, msNormal: 1000});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 1000, msNormal: 1000});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
@@ -173,7 +173,7 @@ const App = () => {
         let play = AI.getPlay();
         if (AI.stats) addText(AI.stats[0]);
 
-        BOARD.legalPlays([gameState.state]).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
+        BOARD.legalPlays([gameState.state]).slice(0, 10).forEach(play => addText(getStatLine("Play: ", play, gameState.state)));
 
         // make the ai play
         addText(getStatLine('AI says to play: ', play, gameState.state));
@@ -270,6 +270,7 @@ const App = () => {
             {/* mode=1, game status box visible */}
             <Box flexDirection='column' flexGrow={1} display={mode===1?'flex':'none'}>
                 <Text>Game Status</Text>
+                <Text> Big: { gameState.state.bigBoard.getHash().toString(2).padStart(19, '0') }</Text>
                 <Text> Player is: { playerNum===1?'X':'O' }</Text>
                 <Text> Position: { gameState.row } / { gameState.col }</Text>
                 <Text> AI is: { aiNum===1?'X':'O' }</Text>
