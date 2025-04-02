@@ -39,7 +39,8 @@ const GridBoard = ({gameState, rows, cols}: {gameState: GameState, rows: number,
 };
 
 const BOARD = new TicTacToeBoard();
-const AI = new MonteCarlo<Play>(BOARD);//, {msFirst: 10, msNormal: 10})//, {msFirst: 10, msNormal: 5});
+//const AI = new MonteCarlo<Play>(BOARD);//, {msFirst: 10, msNormal: 10})//, {msFirst: 10, msNormal: 5});
+const AI = new MonteCarlo<Play>(BOARD, {msFirst: 10, msNormal: 5});
 
 const App = () => {
     let [playerNum, setPlayerNum] = useState(1);
@@ -62,6 +63,11 @@ const App = () => {
     }, []);
 
     const startGame = () => {
+        // initialize game state
+        gameState.state = BOARD.start();
+        gameState.row = 1;
+        gameState.col = 1;
+
         let now = Date.now();
         AI.replay();
         AI.update(gameState.state);
@@ -69,11 +75,6 @@ const App = () => {
         AI.getPlay(); // initialize the engine
         addText(`...DONE ${Date.now()-now}ms ${AI.explored.size} explored states`);
         addText(AI.stats[0]);
-
-        // initialize game state
-        gameState.state = BOARD.start();
-        gameState.row = 1;
-        gameState.col = 1;
 
         // prepareForNextTurn puts us in the right state for whoever's turn it is
         prepareForNextTurn();

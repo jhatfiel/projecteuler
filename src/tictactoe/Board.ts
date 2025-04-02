@@ -8,6 +8,7 @@ export type PlayState<PlayType> = {
 export interface BoardState {
     getHash(): bigint|number;
     normalize(): bigint|number;
+    printState();
 }
 
 export interface BoardInspector {

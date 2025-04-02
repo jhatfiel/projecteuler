@@ -63,7 +63,7 @@ export class MonteCarlo<PlayType> {
         let player = this.board.currentPlayer(state);
         let plays = this.board.legalPlays(this.states);
 
-        if (!plays) {this.running = false; return; }
+        if (!plays?.length) {this.running = false; return; }
         if (plays.length === 1) { this.running = false; return plays[0]; }
 
         let games = 0;
@@ -140,7 +140,7 @@ export class MonteCarlo<PlayType> {
         let winsIn: number;
         let losesIn: number;
 
-        if (this.board.legalPlays([state]).find(s => Object.keys(s).every(k => s[k] === play[k]))) {
+        if (this.board.legalPlays([state]).find(s => Object.keys(s).every(k => play && s[k] === play[k]))) {
             let nextStateNormalized = this.board.nextState(state, play).normalize();
 
             plays = this.plays[currentPlayer].get(nextStateNormalized)?? 1;
