@@ -1,7 +1,8 @@
+//class PriorityHeap<T=number>{constructor(private p=(a:T,b:T)=>b<=a){}private A=new Array<T>(1000);private I=0;size():number{return this.I;}truncate(n:number){if(this.I>=n){this.I=n}}enqueue(e:T):number{this.A[this.I]=e;this.I++;return this.U()}private U(i=this.I-1):number{const e=this.A[i];while(i>0){let p=Math.floor((i-1)/2);let t=this.A[p];if(this.p(e,t))break;this.A[p]=e;this.A[i]=t;i=p}return i}dequeue():T{const m=this.A[0];const e=this.A[this.I-1];this.I=Math.max(0,this.I-1);if(this.I>=0){this.A[0]=e;this.s()}return m}private s(i=0){const l=this.I;const e=this.A[0];while(true){let L=2*i+1;let R=2*i+2;let M:T,N:T;let s:number=null;if(L<l){M=this.A[L];if(this.p(e,M))s=L;}if(R<l){N=this.A[R];if((s===null&&this.p(e,N))||(s!==null&&this.p(M,N)))s=R;}if(s===null)break;this.A[i]=this.A[s];this.A[s]=e;i=s}return i}reorder(f:(o:T)=>boolean){let i=this.A.findIndex(f);if(i!==-1)this.U(this.s(i));}};
 export class PriorityHeap<T=number> {
     constructor(private shouldPrecede: (a: T, b: T) => boolean = (a: T, b: T) => a <= b ) { }
-    values = new Array<T>(10000); // decent sized heap to reduce memory thrash
-    nextIdx = 0;
+    private values = new Array<T>(10000); // decent sized heap to reduce memory thrash
+    private nextIdx = 0;
 
     size(): number { return this.nextIdx; }
 
@@ -17,7 +18,7 @@ export class PriorityHeap<T=number> {
         return this.bubbleUp();
     }
 
-    bubbleUp(idx = this.nextIdx-1): number {
+    private bubbleUp(idx = this.nextIdx-1): number {
         const e = this.values[idx];
         while (idx > 0) {
             let parentIdx = Math.floor((idx-1)/2);
@@ -42,7 +43,7 @@ export class PriorityHeap<T=number> {
         return max;
     }
 
-    sinkDown(idx = 0) {
+    private sinkDown(idx = 0) {
         const length = this.nextIdx;
         const e = this.values[0];
         while (true) {
